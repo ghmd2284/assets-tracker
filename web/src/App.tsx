@@ -24,6 +24,7 @@ import { RecentTransactions } from './components/RecentTransactions';
 import { PerfTab } from './components/PerfTab';
 import { SettingsTab } from './components/SettingsTab';
 import { AdminModal } from './components/AdminModal';
+import { HomeSkeleton } from './components/Skeletons';
 import {
   ShieldCheck,
   Plus,
@@ -50,6 +51,8 @@ export function App() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   const showToast = useCallback((msg: string) => {
@@ -190,6 +193,7 @@ export function App() {
 
   const loadData = useCallback(async (withSync = false) => {
     setLoading(true);
+    if (withSync) setIsSyncing(true);
     try {
       if (withSync) {
         await syncBalances();
@@ -211,6 +215,8 @@ export function App() {
       console.info('[Data Load Info] Running with local preview state:', err);
     } finally {
       setLoading(false);
+      setIsSyncing(false);
+      setInitialLoading(false);
     }
   }, [showToast]);
 
@@ -254,6 +260,23 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-canvas dark:bg-canvas-dark text-brand-primary dark:text-brand-primary-dark flex flex-col font-sans transition-colors duration-200">
+      {/* Indeterminate Top API Loading Bar */}
+      {loading && (
+        <div className="fixed top-0 left-0 right-0 z-50 h-[2.5px] bg-brand-border/20 overflow-hidden pointer-events-none">
+          <div className="h-full w-2/3 bg-gradient-to-r from-chain-ton via-chain-evm to-chain-solana animate-top-progress" />
+        </div>
+      )}
+
+      {/* Floating On-Chain Balance Syncing Pill */}
+      {isSyncing && (
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-40 animate-toast-enter pointer-events-none">
+          <div className="px-3.5 py-1.5 rounded-full bg-surface/95 dark:bg-surface-dark/95 backdrop-blur-md border border-brand-border/80 dark:border-brand-border-dark/80 text-brand-primary dark:text-brand-primary-dark text-xs font-mono font-medium shadow-md flex items-center gap-2">
+            <RefreshCw className="w-3.5 h-3.5 animate-spin text-chain-ton shrink-0" />
+            <span>Menyinkronkan saldo on-chain...</span>
+          </div>
+        </div>
+      )}
+
       {/* Demo Mode Notice Banner (Constrained to max-w-md on desktop) */}
       {isDemoMode && (
         <div className="bg-brand-accent-light dark:bg-brand-border-dark border-b border-brand-border dark:border-brand-border-dark">
@@ -341,8 +364,11 @@ export function App() {
         style={{ paddingBottom: 'calc(6.5rem + env(safe-area-inset-bottom, 0px))' }}
       >
         {/* Tab Content: Home */}
-        {activeTab === 'home' && (
-          <div className="flex flex-col gap-4 animate-japandi-fade-up">
+        {activeTab === 'home' &&
+          (initialLoading ? (
+            <HomeSkeleton />
+          ) : (
+            <div className="flex flex-col gap-4 animate-japandi-fade-up">
             {/* Hero Portfolio Card (Bento Style with Touch Scrubber Sparkline) */}
             <div className="bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-bento p-5 shadow-sm flex flex-col gap-2">
               <div className="flex items-center justify-between text-xs text-brand-subdued dark:text-brand-subdued-dark font-medium">
@@ -451,7 +477,7 @@ export function App() {
               currency={currency}
             />
           </div>
-        )}
+        ))}
 
         {/* Tab Content: Perf (Performance) */}
         {activeTab === 'perf' && (

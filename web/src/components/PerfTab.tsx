@@ -3,6 +3,7 @@ import { CurrencyPref, formatFiat, formatSignedPercent, PerformanceResponse } fr
 import { haptics } from '../lib/telegram';
 import { fetchPerformance } from '../lib/api';
 import { Clock, Sparkles } from 'lucide-react';
+import { PerfSkeleton } from './Skeletons';
 
 interface PerfTabProps {
   totalValueUsd: number;
@@ -104,8 +105,10 @@ export function PerfTab({ totalValueUsd, currency }: PerfTabProps) {
           </span>
         </div>
 
-        {/* Daily Profit / Loss Bar Chart with Interactive Tap Feedback */}
-        {hasLiveSnapshots && barData.length > 0 ? (
+        {/* Daily Profit / Loss Bar Chart with Interactive Tap Feedback & Skeleton Loading */}
+        {loading ? (
+          <PerfSkeleton />
+        ) : hasLiveSnapshots && barData.length > 0 ? (
           <div className="pt-2 flex flex-col gap-2">
             <div className="relative flex items-end justify-between gap-2 h-28 pt-6 pb-1 border-b border-brand-divider dark:border-brand-divider-dark">
               {barData.map((d, idx) => {
