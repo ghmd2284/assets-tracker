@@ -125,6 +125,191 @@ export async function syncWatchedAddressTransactions(
     } catch (err) {
       console.warn(`[Sync Transactions Error] ${address} on TON:`, err);
     }
+  } else if (blockchain === 'solana') {
+    try {
+      const rpcUrl = env.HELIUS_API_KEY
+        ? `https://mainnet.helius-rpc.com/?api-key=${env.HELIUS_API_KEY}`
+        : 'https://api.mainnet-beta.solana.com';
+
+      const sigRes = await fetch(rpcUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'getSignaturesForAddress',
+          params: [address, { limit: 10 }],
+        }),
+      });
+
+      if (sigRes.ok) {
+        const sigData = await sigRes.json<any>();
+        const signatures = sigData?.result || [];
+
+        const { data: subscribers } = await supabase
+          .from('user_wallets')
+          .select(`
+            wallet_label,
+            users (
+              id,
+              currency_pref,
+              min_alert_usd,
+              is_banned
+            )
+          `)
+          .eq('watched_address_id', watchedAddressId);
+
+        for (const item of signatures) {
+          if (!item.signature || item.err) continue;
+
+          const timestamp = item.blockTime
+            ? new Date(item.blockTime * 1000).toISOString()
+            : new Date().toISOString();
+
+          // Check if transaction already exists in database
+          const { data: existing } = await supabase
+            .from('transactions')
+            .select('id')
+            .eq('tx_hash', item.signature)
+            .eq('watched_address_id', watchedAddressId)
+            .maybeSingle();
+
+          if (existing) continue;
+
+          try {
+            const txRes = await fetch(rpcUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                jsonrpc: '2.0',
+                id: 2,
+                method: 'getTransaction',
+                params: [
+                  item.signature,
+                  { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 },
+                ],
+              }),
+            });
+
+            if (txRes.ok) {
+              const txData = await txRes.json<any>();
+              const meta = txData?.result?.meta;
+              const accountKeys = txData?.result?.transaction?.message?.accountKeys || [];
+
+              if (meta && accountKeys.length > 0) {
+                const addrIndex = accountKeys.findIndex((k: any) => {
+                  const pubkey = typeof k === 'string' ? k : k.pubkey;
+                  return pubkey === address;
+                });
+
+                if (addrIndex >= 0) {
+                  const preBal = meta.preBalances?.[addrIndex] ?? 0;
+                  const postBal = meta.postBalances?.[addrIndex] ?? 0;
+                  const diff = postBal - preBal;
+                  const fee = addrIndex === 0 ? (meta.fee ?? 0) : 0;
+                  const netChange = diff + fee;
+
+                  if (Math.abs(diff) > 5000) {
+                    const direction: 'in' | 'out' = diff > 0 ? 'in' : 'out';
+                    const amount = Math.abs(netChange !== 0 ? netChange : diff) / 1e9;
+
+                    const inserted = await insertAndNotify({
+                      env,
+                      supabase,
+                      watchedAddressId,
+                      address,
+                      blockchain: 'solana',
+                      txHash: item.signature,
+                      direction,
+                      tokenSymbol: 'SOL',
+                      amount,
+                      fromAddress: direction === 'in' ? 'external' : address,
+                      toAddress: direction === 'in' ? address : 'external',
+                      timestamp,
+                      subscribers: subscribers || [],
+                      notify: options.notify ?? true,
+                    });
+
+                    if (inserted) newTxCount++;
+                  }
+                }
+              }
+            }
+          } catch (txErr) {
+            console.warn(`[Sync Tx Solana Details Error] ${item.signature}:`, txErr);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(`[Sync Transactions Error] ${address} on Solana:`, err);
+    }
+  } else if (['ethereum', 'bsc', 'base', 'arbitrum', 'polygon'].includes(blockchain) && env.ALCHEMY_API_KEY) {
+    try {
+      const chainPrefix = blockchain === 'bsc' ? 'bnb' : blockchain === 'arbitrum' ? 'arb' : blockchain;
+      const rpcUrl = `https://${chainPrefix}-mainnet.g.alchemy.com/v2/${env.ALCHEMY_API_KEY}`;
+
+      const res = await fetch(rpcUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'alchemy_getAssetTransfers',
+          params: [
+            {
+              fromBlock: '0x0',
+              toAddress: address,
+              category: ['external', 'erc20'],
+              maxCount: '0xa',
+              order: 'desc',
+            },
+          ],
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json<any>();
+        const transfers = data?.result?.transfers || [];
+
+        const { data: subscribers } = await supabase
+          .from('user_wallets')
+          .select(`
+            wallet_label,
+            users (
+              id,
+              currency_pref,
+              min_alert_usd,
+              is_banned
+            )
+          `)
+          .eq('watched_address_id', watchedAddressId);
+
+        for (const tr of transfers) {
+          if (!tr.hash) continue;
+
+          const inserted = await insertAndNotify({
+            env,
+            supabase,
+            watchedAddressId,
+            address,
+            blockchain,
+            txHash: tr.hash,
+            direction: 'in',
+            tokenSymbol: tr.asset || (blockchain === 'polygon' ? 'POL' : blockchain === 'bsc' ? 'BNB' : 'ETH'),
+            amount: Number(tr.value) || 0,
+            fromAddress: tr.from || 'external',
+            toAddress: tr.to || address,
+            timestamp: new Date().toISOString(),
+            subscribers: subscribers || [],
+            notify: options.notify ?? true,
+          });
+
+          if (inserted) newTxCount++;
+        }
+      }
+    } catch (err) {
+      console.warn(`[Sync Transactions Error] ${address} on ${blockchain}:`, err);
+    }
   }
 
   return newTxCount;

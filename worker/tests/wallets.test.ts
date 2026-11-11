@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { resolveTokenPrices } from '../src/providers/prices';
+import { AlchemyProvider } from '../src/providers/alchemy';
+import { HeliusProvider } from '../src/providers/helius';
 import { AggregatedAsset, Blockchain } from '@asset-tracker/shared';
 
 describe('Multi-Chain Asset Aggregation & Pricing Logic', () => {
@@ -92,6 +94,20 @@ describe('Multi-Chain Asset Aggregation & Pricing Logic', () => {
     expect(priceMap.get('solana:SOL')?.priceUsd).toBeGreaterThan(0);
     expect(priceMap.get('ton:TON')?.priceUsd).toBeGreaterThan(0);
     expect(priceMap.get('ethereum:ETH')?.isSpam).toBe(false);
+  });
+
+  it('AlchemyProvider does not return hardcoded mock balances when API key is missing', async () => {
+    const provider = new AlchemyProvider();
+    const balances = await provider.getBalances('0x0000000000000000000000000000000000000000', 'ethereum');
+    const hasMock = balances.some((b) => b.balance === 1.25 && b.valueUsd === 3312.5);
+    expect(hasMock).toBe(false);
+  });
+
+  it('HeliusProvider does not return hardcoded mock 14.5 SOL when API key is missing', async () => {
+    const provider = new HeliusProvider();
+    const balances = await provider.getBalances('HpufeAoYZaRW7iyEXvpYfxkvuvqKdYwQ2dgfbiXDdBka');
+    const hasMock = balances.some((b) => b.balance === 14.5 && b.valueUsd === 2682.5);
+    expect(hasMock).toBe(false);
   });
 });
 

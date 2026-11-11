@@ -9,6 +9,12 @@ interface ChainAccordionProps {
   hasWallets?: boolean;
 }
 
+function getChainColorClass(chain: string): string {
+  if (chain === 'ton') return 'text-chain-ton';
+  if (chain === 'solana') return 'text-chain-solana';
+  return 'text-chain-evm';
+}
+
 export function ChainAccordion({ assets, currency, hasWallets = false }: ChainAccordionProps) {
   const [expandedSymbol, setExpandedSymbol] = useState<string | null>(null);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
@@ -108,7 +114,7 @@ export function ChainAccordion({ assets, currency, hasWallets = false }: ChainAc
                     >
                       <div className="flex flex-col">
                         <div className="flex items-center gap-1.5 font-medium">
-                          <span className="uppercase font-mono text-[11px] text-chain-ton">
+                          <span className={`uppercase font-mono text-[11px] ${getChainColorClass(sub.blockchain)}`}>
                             {sub.blockchain}
                           </span>
                           <span className="text-brand-subdued">·</span>

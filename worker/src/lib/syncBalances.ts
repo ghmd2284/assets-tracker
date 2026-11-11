@@ -17,9 +17,16 @@ export async function syncWatchedAddressBalances(
   try {
     const balances = await fetchChainBalances(address, blockchain, env);
 
-    for (const bal of balances) {
-      await supabase.from('token_balances').upsert(
-        {
+    // Clear stale cached balances for this watched address so no phantom or zero-balance tokens remain
+    await supabase
+      .from('token_balances')
+      .delete()
+      .eq('watched_address_id', watchedAddressId);
+
+    // Insert fresh balances with non-zero amounts
+    if (balances.length > 0) {
+      await supabase.from('token_balances').insert(
+        balances.map((bal) => ({
           watched_address_id: watchedAddressId,
           token_symbol: bal.symbol,
           token_name: bal.name,
@@ -30,8 +37,7 @@ export async function syncWatchedAddressBalances(
           logo_url: bal.logoUrl || null,
           is_spam: bal.isSpam,
           updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'watched_address_id,token_symbol,contract_address' }
+        }))
       );
     }
 

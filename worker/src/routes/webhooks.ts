@@ -64,8 +64,9 @@ export async function processMutation(
     const sym = mutation.tokenSymbol.toUpperCase();
     if (sym === 'ETH') priceUsd = 2650;
     else if (sym === 'BNB') priceUsd = 580;
-    else if (sym === 'SOL') priceUsd = 150;
+    else if (sym === 'SOL') priceUsd = 185;
     else if (sym === 'TON') priceUsd = 5.0;
+    else if (sym === 'POL') priceUsd = 0.38;
     else if (sym === 'USDT' || sym === 'USDC' || sym === 'DAI') priceUsd = 1.0;
     else {
       try {
