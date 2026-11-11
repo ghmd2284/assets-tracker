@@ -4,8 +4,8 @@ compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
-ENVIRONMENT = "development"
-MINI_APP_URL = "https://asset-tracker.pages.dev"
+ENVIRONMENT = "production"
+MINI_APP_URL = "https://asset-tracker-1z9.pages.dev"
 
 # Setup KV namespace for price caching in production via:
 # wrangler kv:namespace create "PRICE_CACHE"
