@@ -35,6 +35,7 @@ import {
   SlidersHorizontal,
   Home,
   RefreshCw,
+  CheckCircle2,
 } from 'lucide-react';
 
 export function App() {
@@ -49,6 +50,14 @@ export function App() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  const showToast = useCallback((msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => {
+      setToastMsg((current) => (current === msg ? null : current));
+    }, 2500);
+  }, []);
 
   // Live Data State
   const [portfolio, setPortfolio] = useState<{
@@ -195,12 +204,15 @@ export function App() {
       }
       setWallets(wList);
       setTransactions(txList);
+      if (withSync) {
+        showToast('Portofolio berhasil disinkronkan!');
+      }
     } catch (err) {
       console.info('[Data Load Info] Running with local preview state:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     const userState = initTelegram();
@@ -225,7 +237,11 @@ export function App() {
   };
 
   const handleToggleDemo = () => {
-    setIsDemoMode((prev) => !prev);
+    setIsDemoMode((prev) => {
+      const next = !prev;
+      showToast(next ? 'Mode demo whale aktif' : 'Keluar dari mode demo');
+      return next;
+    });
     haptics.notification('success');
   };
 
@@ -280,7 +296,9 @@ export function App() {
             <button
               type="button"
               onClick={() => {
-                setCurrency((c) => (c === 'USD' ? 'IDR' : 'USD'));
+                const nextCurrency = currency === 'USD' ? 'IDR' : 'USD';
+                setCurrency(nextCurrency);
+                showToast(`Mata uang diganti ke ${nextCurrency}`);
                 haptics.selection();
               }}
               className="min-h-[38px] px-3 text-xs font-mono font-medium rounded-full border border-brand-border dark:border-brand-border-dark bg-surface dark:bg-surface-dark hover:bg-surface-dim active:scale-95 transition-all flex items-center justify-center shadow-xs"
@@ -462,6 +480,16 @@ export function App() {
           </div>
         )}
       </main>
+
+      {/* Japandi Floating Toast Notification */}
+      {toastMsg && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-toast-enter">
+          <div className="px-4 py-2 rounded-full bg-brand-primary dark:bg-brand-primary-dark text-white dark:text-brand-primary text-xs font-mono font-medium shadow-lg flex items-center gap-2 border border-brand-border/20 dark:border-brand-border-dark/20">
+            <CheckCircle2 className="w-3.5 h-3.5 text-semantic-gain shrink-0" />
+            <span>{toastMsg}</span>
+          </div>
+        </div>
+      )}
 
       {/* Floating Bottom Navigation Bar (Japandi Pill with Safe Area) */}
       <nav

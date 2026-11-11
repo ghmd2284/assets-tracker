@@ -60,8 +60,12 @@ export function WalletList({ wallets, onRefresh }: WalletListProps) {
       </div>
 
       <div className="flex flex-col divide-y divide-brand-divider dark:divide-brand-divider-dark">
-        {wallets.map((w) => (
-          <div key={w.id} className="py-2.5 flex items-center justify-between gap-2">
+        {wallets.map((w, idx) => (
+          <div
+            key={w.id}
+            className="py-2.5 flex items-center justify-between gap-2 animate-stagger-item"
+            style={{ animationDelay: `${Math.min(idx * 35, 300)}ms` }}
+          >
             <div className="flex flex-col min-w-0 pr-2">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-medium truncate">{w.label}</span>

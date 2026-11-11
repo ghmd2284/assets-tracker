@@ -73,12 +73,16 @@ export function RecentTransactions({ transactions, currency }: RecentTransaction
       </div>
 
       <div className="flex flex-col divide-y divide-brand-divider dark:divide-brand-divider-dark">
-        {transactions.slice(0, 5).map((tx) => {
+        {transactions.slice(0, 5).map((tx, idx) => {
           const isInbound = tx.direction === 'in';
           const explorerUrl = getExplorerTxUrl(tx.blockchain, tx.txHash);
 
           return (
-            <div key={tx.id || tx.txHash} className="py-2.5 flex items-center justify-between gap-2">
+            <div
+              key={tx.id || tx.txHash}
+              className="py-2.5 flex items-center justify-between gap-2 animate-stagger-item"
+              style={{ animationDelay: `${Math.min(idx * 40, 300)}ms` }}
+            >
               <div className="flex items-center gap-2.5 min-w-0">
                 {/* Direction Icon Badge */}
                 <div

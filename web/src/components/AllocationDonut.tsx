@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { PortfolioSummary, CurrencyPref, formatFiat } from '@asset-tracker/shared';
+import { haptics } from '../lib/telegram';
 import { PieChart } from 'lucide-react';
 
 interface AllocationDonutProps {
@@ -10,6 +11,7 @@ interface AllocationDonutProps {
 export function AllocationDonut({ summary, currency }: AllocationDonutProps) {
   const { tonPercent, evmPercent, solanaPercent } = summary.allocation;
   const totalVal = summary.totalValueUsd;
+  const [selectedChain, setSelectedChain] = useState<string | null>(null);
 
   // Slices configuration in Japandi Mineral Palette
   const slices = [
@@ -96,45 +98,74 @@ export function AllocationDonut({ summary, currency }: AllocationDonutProps) {
               className="text-surface-dim dark:text-surface-container-high-dark"
             />
 
-            {/* Slices */}
-            {activeSlices.map((slice, idx) => (
-              <circle
-                key={slice.name}
-                cx={center}
-                cy={center}
-                r={radius}
-                fill="transparent"
-                stroke={slice.color}
-                strokeWidth={strokeWidth}
-                strokeDasharray={slice.strokeDasharray}
-                strokeDashoffset={slice.strokeDashoffset}
-                strokeLinecap="round"
-                className="transition-all duration-500 ease-out"
-                style={{
-                  stroke: `var(--color-${idx}, ${slice.color})`,
-                }}
-              />
-            ))}
+            {/* Interactive Slices with Dynamic Stroke Expansion */}
+            {activeSlices.map((slice) => {
+              const isSelected = selectedChain === slice.name;
+
+              return (
+                <circle
+                  key={slice.name}
+                  cx={center}
+                  cy={center}
+                  r={radius}
+                  fill="transparent"
+                  stroke={slice.color}
+                  strokeWidth={isSelected ? strokeWidth + 4 : strokeWidth}
+                  strokeDasharray={slice.strokeDasharray}
+                  strokeDashoffset={slice.strokeDashoffset}
+                  strokeLinecap="round"
+                  className="transition-all duration-300 ease-out cursor-pointer hover:opacity-90"
+                  onClick={() => {
+                    setSelectedChain((prev) => (prev === slice.name ? null : slice.name));
+                    haptics.selection();
+                  }}
+                />
+              );
+            })}
           </svg>
 
-          {/* Donut Center Metric */}
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-            <span className="text-sm font-mono font-semibold leading-tight">
-              {activeChainCount > 0 ? `${activeChainCount}` : '0'}
-            </span>
-            <span className="text-[10px] font-mono text-brand-subdued uppercase">
-              Chains
-            </span>
+          {/* Donut Center Metric with Motion */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-2 pointer-events-none">
+            {selectedChain ? (
+              <div key={selectedChain} className="animate-japandi-fade-up">
+                <span className="text-xs font-mono font-bold leading-tight block truncate max-w-[64px]">
+                  {slices.find((s) => s.name === selectedChain)?.percent.toFixed(0)}%
+                </span>
+                <span className="text-[9px] font-mono text-brand-subdued uppercase block truncate max-w-[64px]">
+                  {selectedChain.split(' ')[0]}
+                </span>
+              </div>
+            ) : (
+              <div className="animate-japandi-fade-up">
+                <span className="text-sm font-mono font-semibold leading-tight block">
+                  {activeChainCount > 0 ? `${activeChainCount}` : '0'}
+                </span>
+                <span className="text-[10px] font-mono text-brand-subdued uppercase block">
+                  Chains
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Accessible Legend with Explicit % and Color Swatches (WCAG color-not-only) */}
+        {/* Accessible Legend with Interactive Slice Highlighting & Stagger Motion */}
         <div className="flex-1 flex flex-col gap-2 min-w-0">
-          {slices.map((slice) => {
-            const valUsd = totalVal * (slice.percent / 100);
+          {slices.map((slice, idx) => {
+            const isSelected = selectedChain === slice.name;
+            const sliceValUsd = (totalVal * slice.percent) / 100;
 
             return (
-              <div key={slice.name} className="flex items-center justify-between text-xs gap-2">
+              <div
+                key={slice.name}
+                onClick={() => {
+                  setSelectedChain((prev) => (prev === slice.name ? null : slice.name));
+                  haptics.selection();
+                }}
+                className={`flex items-center justify-between text-xs gap-2 p-1 rounded-button cursor-pointer transition-all animate-stagger-item ${
+                  isSelected ? 'bg-surface-dim dark:bg-surface-container-high-dark scale-[1.02]' : 'hover:bg-canvas/60'
+                }`}
+                style={{ animationDelay: `${idx * 40}ms` }}
+              >
                 <div className="flex items-center gap-2 min-w-0">
                   <span
                     className="w-2.5 h-2.5 rounded-full shrink-0"
@@ -156,7 +187,7 @@ export function AllocationDonut({ summary, currency }: AllocationDonutProps) {
                   </span>
                   {totalVal > 0 && slice.percent > 0 && (
                     <span className="text-[10px] font-mono text-brand-subdued block">
-                      {formatFiat(valUsd, currency)}
+                      {formatFiat(sliceValUsd, currency)}
                     </span>
                   )}
                 </div>

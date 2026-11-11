@@ -72,6 +72,46 @@
   }
 }
 
+@keyframes staggerFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toastEnter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -16px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes subtlePulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
 .animate-japandi-fade-up {
   animation: japandiFadeUp 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -82,6 +122,42 @@
 
 .animate-japandi-fade {
   animation: japandiFadeIn 180ms ease-out forwards;
+}
+
+.animate-stagger-item {
+  opacity: 0;
+  animation: staggerFadeUp 260ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-toast-enter {
+  animation: toastEnter 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pulse-subtle {
+  animation: subtlePulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Japandi Skeleton Shimmer */
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(234, 230, 223, 0.3) 0%,
+    rgba(234, 230, 223, 0.75) 50%,
+    rgba(234, 230, 223, 0.3) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.dark .skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(46, 43, 39, 0.3) 0%,
+    rgba(61, 56, 51, 0.75) 50%,
+    rgba(46, 43, 39, 0.3) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
 }
 
 /* Accessibility: Respect Reduced Motion Preference */

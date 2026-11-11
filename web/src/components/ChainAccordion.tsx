@@ -57,7 +57,7 @@ export function ChainAccordion({ assets, currency, hasWallets = false }: ChainAc
       </div>
 
       <div className="divide-y divide-brand-divider dark:divide-brand-divider-dark">
-        {assets.map((asset) => {
+        {assets.map((asset, index) => {
           const isExpanded = expandedSymbol === asset.symbol;
           const chainCount = asset.chains.length;
           const logoUrl = getTokenLogoUrl(asset.symbol, asset.logoUrl);
@@ -72,12 +72,16 @@ export function ChainAccordion({ assets, currency, hasWallets = false }: ChainAc
               (asset.symbol === 'TON' && singleChain === 'ton'));
 
           return (
-            <div key={asset.symbol} className="flex flex-col">
+            <div
+              key={asset.symbol}
+              className="flex flex-col animate-stagger-item"
+              style={{ animationDelay: `${Math.min(index * 35, 300)}ms` }}
+            >
               {/* Parent Token Header Row */}
               <button
                 type="button"
                 onClick={() => toggleExpand(asset.symbol)}
-                className="px-4 py-3 w-full flex items-center justify-between text-left hover:bg-canvas/50 dark:hover:bg-canvas-dark/50 transition-colors"
+                className="px-4 py-3 w-full flex items-center justify-between text-left hover:bg-canvas/50 dark:hover:bg-canvas-dark/50 active:scale-[0.99] transition-all"
               >
                 <div className="flex items-center gap-3">
                   {/* Crypto Emblem Avatar with Anti-Blank Architecture */}
@@ -165,7 +169,8 @@ export function ChainAccordion({ assets, currency, hasWallets = false }: ChainAc
                     {asset.chains.map((sub, idx) => (
                       <div
                         key={`${sub.blockchain}-${idx}`}
-                        className="py-2 px-3 bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-button flex items-center justify-between text-xs shadow-xs"
+                        className="py-2 px-3 bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-button flex items-center justify-between text-xs shadow-xs animate-stagger-item"
+                        style={{ animationDelay: `${idx * 25}ms` }}
                       >
                         <div className="flex flex-col min-w-0 pr-2">
                           <div className="flex items-center gap-1.5 font-medium">
