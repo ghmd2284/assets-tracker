@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { CurrencyPref, formatFiat, formatSignedPercent } from '@asset-tracker/shared';
+import React, { useState, useEffect } from 'react';
+import { CurrencyPref, formatFiat, formatSignedPercent, PerformanceResponse } from '@asset-tracker/shared';
 import { haptics } from '../lib/telegram';
-import { Calendar, TrendingUp, Sparkles, Clock } from 'lucide-react';
+import { fetchPerformance } from '../lib/api';
+import { Clock, Sparkles } from 'lucide-react';
 
 interface PerfTabProps {
   totalValueUsd: number;
@@ -12,9 +13,36 @@ type Timeframe = '1D' | '1W' | '1M' | '1Y' | 'ALL';
 
 export function PerfTab({ totalValueUsd, currency }: PerfTabProps) {
   const [timeframe, setTimeframe] = useState<Timeframe>('1W');
+  const [perfData, setPerfData] = useState<PerformanceResponse | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  // Sample data simulating historical daily snapshot deltas
-  const barData = [
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+
+    fetchPerformance(timeframe)
+      .then((data) => {
+        if (isMounted) {
+          setPerfData(data);
+        }
+      })
+      .catch((err) => console.info('[Perf Tab Info] Running with fallback:', err))
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [timeframe]);
+
+  const handleTimeframeChange = (tf: Timeframe) => {
+    setTimeframe(tf);
+    haptics.selection();
+  };
+
+  // Sample fallback data if history is newly starting
+  const fallbackBars = [
     { day: 'Sen', changePercent: 1.2, changeUsd: 145 },
     { day: 'Sel', changePercent: -0.8, changeUsd: -95 },
     { day: 'Rab', changePercent: 2.5, changeUsd: 310 },
@@ -24,13 +52,26 @@ export function PerfTab({ totalValueUsd, currency }: PerfTabProps) {
     { day: 'Min', changePercent: 2.45, changeUsd: 295 },
   ];
 
-  const handleTimeframeChange = (tf: Timeframe) => {
-    setTimeframe(tf);
-    haptics.selection();
-  };
+  const hasLiveSnapshots = perfData?.snapshots && perfData.snapshots.length >= 2;
 
-  const totalPeriodChangeUsd = barData.reduce((acc, d) => acc + d.changeUsd, 0);
-  const totalPeriodChangePercent = (totalPeriodChangeUsd / (totalValueUsd || 1)) * 100;
+  // Build bars from live snapshots or fallback
+  const barData = hasLiveSnapshots
+    ? perfData.snapshots.slice(1).map((s, idx) => {
+        const prev = perfData.snapshots[idx].totalValueUsd;
+        const changeUsd = s.totalValueUsd - prev;
+        const changePercent = prev > 0 ? (changeUsd / prev) * 100 : 0;
+        const day = new Date(s.recordedAt).toLocaleDateString('id-ID', { weekday: 'short' });
+        return { day, changePercent, changeUsd };
+      })
+    : fallbackBars;
+
+  const totalPeriodChangeUsd = hasLiveSnapshots
+    ? (perfData?.changeUsd ?? 0)
+    : barData.reduce((acc, d) => acc + d.changeUsd, 0);
+
+  const totalPeriodChangePercent = hasLiveSnapshots
+    ? (perfData?.changePercent ?? 0)
+    : (totalPeriodChangeUsd / (totalValueUsd || 1)) * 100;
 
   return (
     <div className="flex flex-col gap-4 animate-in fade-in duration-150">
@@ -86,6 +127,7 @@ export function PerfTab({ totalValueUsd, currency }: PerfTabProps) {
                         : 'bg-semantic-loss dark:bg-semantic-loss-dark'
                     }`}
                     style={{ height: `${absHeight}px` }}
+                    title={`${d.day}: ${d.changePercent >= 0 ? '+' : ''}${d.changePercent.toFixed(1)}%`}
                   />
                   <span className="text-[10px] font-mono text-brand-subdued mt-1">
                     {d.day}
@@ -113,7 +155,9 @@ export function PerfTab({ totalValueUsd, currency }: PerfTabProps) {
         <Sparkles className="w-5 h-5 text-chain-evm shrink-0 mt-0.5" />
         <div className="text-xs leading-relaxed">
           <div className="font-medium text-brand-primary dark:text-brand-primary-dark">
-            Bagaimana grafik performa bekerja?
+            {hasLiveSnapshots
+              ? `Histori Portofolio Aktif (${perfData?.snapshots.length} Hari Snapshot)`
+              : 'Akumulasi Snapshot Portofolio Otomatis'}
           </div>
           <p className="text-brand-subdued dark:text-brand-subdued-dark mt-0.5">
             Cloudflare Worker mencatat snapshot total nilai portofolio Anda setiap hari pukul 00:00 UTC ke database Supabase. Akurasi grafik akan semakin detail seiring waktu.

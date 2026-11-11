@@ -9,6 +9,8 @@ import {
   PortfolioSummary,
   WatchedWallet,
   MutationTransaction,
+  PortfolioSnapshot,
+  PerformanceResponse,
 } from '@asset-tracker/shared';
 import { fetchChainBalances, getUsdToIdrRate } from '../providers';
 import { syncWatchedAddressBalances } from '../lib/syncBalances';
@@ -388,4 +390,61 @@ walletRoutes.get('/transactions', async (c) => {
   }));
 
   return c.json({ transactions });
+});
+
+// GET /api/wallets/performance - Retrieve historical portfolio snapshots and deltas
+walletRoutes.get('/performance', async (c) => {
+  const { user } = c.get('telegramAuth');
+  const range = c.req.query('range') || '1W';
+  const supabase = getSupabaseClient(c.env);
+
+  const now = new Date();
+  let days = 7;
+  if (range === '1D') days = 1;
+  else if (range === '1W') days = 7;
+  else if (range === '1M') days = 30;
+  else if (range === '1Y') days = 365;
+  else if (range === 'ALL') days = 3650;
+
+  const startDate = new Date(now.getTime() - days * 24 * 3600 * 1000)
+    .toISOString()
+    .split('T')[0];
+
+  const { data: snapshots, error } = await supabase
+    .from('portfolio_snapshots')
+    .select('recorded_at, total_value_usd')
+    .eq('user_id', user.id)
+    .gte('recorded_at', startDate)
+    .order('recorded_at', { ascending: true });
+
+  if (error) {
+    console.error('[Performance Endpoint Error]:', error);
+    return c.json({ snapshots: [], currentValueUsd: 0, changeUsd: 0, changePercent: 0, range });
+  }
+
+  const formattedSnapshots: PortfolioSnapshot[] = (snapshots || []).map((s) => ({
+    recordedAt: s.recorded_at,
+    totalValueUsd: Number(s.total_value_usd) || 0,
+  }));
+
+  let changeUsd = 0;
+  let changePercent = 0;
+  let currentValueUsd = 0;
+
+  if (formattedSnapshots.length > 0) {
+    currentValueUsd = formattedSnapshots[formattedSnapshots.length - 1].totalValueUsd;
+    const initialValueUsd = formattedSnapshots[0].totalValueUsd;
+    changeUsd = currentValueUsd - initialValueUsd;
+    changePercent = initialValueUsd > 0 ? (changeUsd / initialValueUsd) * 100 : 0;
+  }
+
+  const response: PerformanceResponse = {
+    snapshots: formattedSnapshots,
+    currentValueUsd,
+    changeUsd: Math.round(changeUsd * 100) / 100,
+    changePercent: Math.round(changePercent * 100) / 100,
+    range,
+  };
+
+  return c.json(response);
 });

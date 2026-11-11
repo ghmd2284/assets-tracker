@@ -5,6 +5,7 @@ import { authRoutes } from './routes/auth';
 import { walletRoutes } from './routes/wallets';
 import { botRoutes } from './routes/bot';
 import { webhookRoutes } from './routes/webhooks';
+import { recordDailyPortfolioSnapshots } from './lib/cronSnapshot';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -38,6 +39,6 @@ export default {
   fetch: app.fetch,
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
     console.log(`[Cron Trigger] Executing scheduled daily task at ${new Date().toISOString()}`);
-    // Phase 5: Snapshot portfolio balances
+    ctx.waitUntil(recordDailyPortfolioSnapshots(env));
   },
 };

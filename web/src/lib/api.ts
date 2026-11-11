@@ -1,4 +1,11 @@
-import { UserProfile, WatchedWallet, AggregatedAsset, PortfolioSummary, MutationTransaction } from '@asset-tracker/shared';
+import {
+  UserProfile,
+  WatchedWallet,
+  AggregatedAsset,
+  PortfolioSummary,
+  MutationTransaction,
+  PerformanceResponse,
+} from '@asset-tracker/shared';
 import { getTelegramInitData } from './telegram';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -122,5 +129,20 @@ export async function fetchTransactions(limit = 10): Promise<MutationTransaction
   } catch (err) {
     console.warn('[Transactions Fetch Info] Fallback to empty list:', err);
     return [];
+  }
+}
+
+/**
+ * Fetches historical portfolio snapshots and deltas.
+ */
+export async function fetchPerformance(range = '1W'): Promise<PerformanceResponse | null> {
+  const initData = getTelegramInitData();
+  if (!initData) return null;
+
+  try {
+    return await apiFetch<PerformanceResponse>(`/api/wallets/performance?range=${range}`);
+  } catch (err) {
+    console.warn('[Performance Fetch Info] Fallback to empty:', err);
+    return null;
   }
 }

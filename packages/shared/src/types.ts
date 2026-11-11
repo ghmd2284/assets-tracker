@@ -96,3 +96,16 @@ export interface PortfolioSummary {
   };
 }
 
+export interface PortfolioSnapshot {
+  recordedAt: string;
+  totalValueUsd: number;
+}
+
+export interface PerformanceResponse {
+  snapshots: PortfolioSnapshot[];
+  currentValueUsd: number;
+  changeUsd: number;
+  changePercent: number;
+  range: string;
+}
+
