@@ -282,10 +282,11 @@ export function App() {
               {tgUser.firstName ? tgUser.firstName.charAt(0).toUpperCase() : '🌿'}
             </div>
             <div>
-              <h1 className="text-sm font-semibold leading-tight">
+              <h1 className="text-sm font-semibold leading-tight text-brand-primary dark:text-brand-primary-dark">
                 {tgUser.firstName ? `Halo, ${tgUser.firstName}` : 'Asset Tracker'}
               </h1>
-              <p className="text-[11px] font-mono text-brand-subdued dark:text-brand-subdued-dark">
+              <p className="text-[11px] font-mono text-brand-subdued dark:text-brand-subdued-dark flex items-center gap-1.5 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-semantic-gain animate-pulse-glow" />
                 100% Watch-Only
               </p>
             </div>
@@ -413,17 +414,20 @@ export function App() {
 
             {/* Supported Multi-Chain Badges */}
             <div className="flex items-center justify-between px-1">
-              <span className="text-xs font-medium text-brand-subdued dark:text-brand-subdued-dark">
+              <span className="text-xs font-semibold text-brand-subdued dark:text-brand-subdued-dark">
                 Jaringan Terhubung
               </span>
               <div className="flex items-center gap-1.5 font-mono text-[11px]">
-                <span className="px-2 py-0.5 rounded-full bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark text-chain-ton">
+                <span className="px-2.5 py-0.5 rounded-full bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark text-chain-ton dark:text-chain-ton-dark flex items-center gap-1.5 shadow-2xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-chain-ton dark:bg-chain-ton-dark" />
                   TON
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark text-chain-evm">
+                <span className="px-2.5 py-0.5 rounded-full bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark text-chain-evm dark:text-chain-evm-dark flex items-center gap-1.5 shadow-2xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-chain-evm dark:bg-chain-evm-dark" />
                   EVM (5)
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark text-chain-solana">
+                <span className="px-2.5 py-0.5 rounded-full bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark text-chain-solana dark:text-chain-solana-dark flex items-center gap-1.5 shadow-2xs">
+                  <span className="w-1.5 h-1.5 rounded-full bg-chain-solana dark:bg-chain-solana-dark" />
                   SOL
                 </span>
               </div>
@@ -496,47 +500,50 @@ export function App() {
         className="fixed left-4 right-4 max-w-md mx-auto z-30 pointer-events-auto"
         style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
       >
-        <div className="h-14 px-3 bg-surface/90 dark:bg-surface-dark/90 backdrop-blur-md border border-brand-border dark:border-brand-border-dark rounded-full shadow-md flex items-center justify-around">
+        <div className="h-14 px-3 bg-surface/90 dark:bg-surface-dark/90 backdrop-blur-xl border border-brand-border/80 dark:border-brand-border-dark/80 rounded-full shadow-lg flex items-center justify-around transition-all">
           <button
             type="button"
             onClick={() => handleTabChange('home')}
-            className={`min-h-[44px] min-w-[44px] px-3.5 flex items-center gap-1.5 rounded-full text-xs font-medium active:scale-95 transition-all ${
+            className={`min-h-[44px] min-w-[44px] px-4 flex items-center gap-2 rounded-full text-xs font-medium active:scale-90 transition-all ${
               activeTab === 'home'
-                ? 'bg-brand-accent-light dark:bg-brand-border-dark text-brand-primary dark:text-brand-primary-dark font-semibold shadow-xs'
+                ? 'bg-brand-accent-light dark:bg-brand-border-dark text-brand-primary dark:text-brand-primary-dark font-semibold shadow-2xs'
                 : 'text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark'
             }`}
             aria-label="Buka tab Beranda"
           >
-            <Home className="w-4 h-4" />
+            <Home className="w-4 h-4 shrink-0" />
             <span>Home</span>
+            {activeTab === 'home' && <span className="w-1 h-1 rounded-full bg-brand-primary dark:bg-brand-primary-dark shrink-0" />}
           </button>
 
           <button
             type="button"
             onClick={() => handleTabChange('perf')}
-            className={`min-h-[44px] min-w-[44px] px-3.5 flex items-center gap-1.5 rounded-full text-xs font-medium active:scale-95 transition-all ${
+            className={`min-h-[44px] min-w-[44px] px-4 flex items-center gap-2 rounded-full text-xs font-medium active:scale-90 transition-all ${
               activeTab === 'perf'
-                ? 'bg-brand-accent-light dark:bg-brand-border-dark text-brand-primary dark:text-brand-primary-dark font-semibold shadow-xs'
+                ? 'bg-brand-accent-light dark:bg-brand-border-dark text-brand-primary dark:text-brand-primary-dark font-semibold shadow-2xs'
                 : 'text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark'
             }`}
             aria-label="Buka tab Performa"
           >
-            <TrendingUp className="w-4 h-4" />
+            <TrendingUp className="w-4 h-4 shrink-0" />
             <span>Perf.</span>
+            {activeTab === 'perf' && <span className="w-1 h-1 rounded-full bg-brand-primary dark:bg-brand-primary-dark shrink-0" />}
           </button>
 
           <button
             type="button"
             onClick={() => handleTabChange('settings')}
-            className={`min-h-[44px] min-w-[44px] px-3.5 flex items-center gap-1.5 rounded-full text-xs font-medium active:scale-95 transition-all ${
+            className={`min-h-[44px] min-w-[44px] px-4 flex items-center gap-2 rounded-full text-xs font-medium active:scale-90 transition-all ${
               activeTab === 'settings'
-                ? 'bg-brand-accent-light dark:bg-brand-border-dark text-brand-primary dark:text-brand-primary-dark font-semibold shadow-xs'
+                ? 'bg-brand-accent-light dark:bg-brand-border-dark text-brand-primary dark:text-brand-primary-dark font-semibold shadow-2xs'
                 : 'text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark'
             }`}
             aria-label="Buka tab Pengaturan"
           >
-            <SlidersHorizontal className="w-4 h-4" />
+            <SlidersHorizontal className="w-4 h-4 shrink-0" />
             <span>Settings</span>
+            {activeTab === 'settings' && <span className="w-1 h-1 rounded-full bg-brand-primary dark:bg-brand-primary-dark shrink-0" />}
           </button>
         </div>
       </nav>

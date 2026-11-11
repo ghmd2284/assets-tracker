@@ -3,7 +3,7 @@ import { WatchedWallet, CurrencyPref, UserProfile } from '@asset-tracker/shared'
 import { WalletList } from './WalletList';
 import { haptics } from '../lib/telegram';
 import { updatePreferences } from '../lib/api';
-import { Shield, Bell, DollarSign, Trash2, User, Check, ExternalLink, ShieldAlert } from 'lucide-react';
+import { Shield, Bell, DollarSign, Trash2, User, Check, ExternalLink, ShieldAlert, SlidersHorizontal } from 'lucide-react';
 
 interface SettingsTabProps {
   userProfile?: UserProfile | null;
@@ -68,23 +68,24 @@ export function SettingsTab({
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 animate-japandi-fade-up">
       {/* User Identity Card */}
-      <div className="bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-tile p-4 shadow-sm flex items-center justify-between">
+      <div className="bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-tile p-4 shadow-sm flex items-center justify-between transition-all">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-brand-accent-light dark:bg-brand-border-dark flex items-center justify-center font-mono font-semibold text-sm text-brand-primary dark:text-brand-primary-dark">
+          <div className="w-10 h-10 rounded-full bg-brand-accent-light dark:bg-brand-border-dark flex items-center justify-center font-mono font-semibold text-sm text-brand-primary dark:text-brand-primary-dark border border-brand-border/40 dark:border-brand-border-dark/40 shadow-2xs">
             <User className="w-5 h-5 text-brand-subdued" />
           </div>
           <div>
             <div className="text-sm font-semibold">
               {userProfile?.firstName || 'Pengguna Telegram'}
             </div>
-            <div className="text-xs font-mono text-brand-subdued">
+            <div className="text-xs font-mono text-brand-subdued dark:text-brand-subdued-dark">
               ID: {userProfile?.id || 'Browser Preview'} {userProfile?.username ? `(@${userProfile.username})` : ''}
             </div>
           </div>
         </div>
-        <span className="px-2 py-0.5 rounded-full bg-semantic-gain-bg text-semantic-gain font-mono text-[10px] font-medium">
+        <span className="px-2.5 py-0.5 rounded-full bg-semantic-gain-bg text-semantic-gain dark:bg-semantic-gain-dark-bg dark:text-semantic-gain-dark font-mono text-[10px] font-medium flex items-center gap-1.5 border border-semantic-gain/20 shadow-2xs">
+          <span className="w-1.5 h-1.5 rounded-full bg-semantic-gain animate-pulse-glow" />
           Aktif
         </span>
       </div>
@@ -93,10 +94,13 @@ export function SettingsTab({
       <WalletList wallets={wallets} onRefresh={onRefreshWallets} />
 
       {/* Settings & Preferences Bento Card */}
-      <div className="bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-tile p-5 shadow-sm flex flex-col gap-4">
-        <h3 className="text-xs font-semibold border-b border-brand-divider dark:border-brand-divider-dark pb-2">
-          Preferensi Aplikasi
-        </h3>
+      <div className="bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-tile p-5 shadow-sm flex flex-col gap-4 transition-all">
+        <div className="flex items-center gap-2 border-b border-brand-divider dark:border-brand-divider-dark pb-2.5">
+          <div className="w-6 h-6 rounded-md bg-brand-accent-light dark:bg-brand-border-dark flex items-center justify-center">
+            <SlidersHorizontal className="w-3.5 h-3.5 text-brand-primary dark:text-brand-primary-dark" />
+          </div>
+          <h3 className="text-xs font-semibold">Preferensi Aplikasi</h3>
+        </div>
 
         {/* Currency Preference */}
         <div className="flex items-center justify-between text-xs">

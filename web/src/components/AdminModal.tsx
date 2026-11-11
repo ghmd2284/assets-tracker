@@ -132,6 +132,9 @@ export function AdminModal({ isOpen, onClose }: AdminModalProps) {
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm animate-japandi-fade"
     >
       <div className="bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-t-bento sm:rounded-bento w-full max-w-md max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-japandi-slide-up sm:animate-japandi-fade-up">
+        {/* Bottom Sheet Grabber Handle */}
+        <div className="w-10 h-1 bg-brand-border dark:bg-brand-border-dark rounded-full mx-auto mt-2.5 mb-0.5 shrink-0 sm:hidden" />
+
         {/* Header */}
         <div className="p-4 border-b border-brand-divider dark:border-brand-divider-dark flex items-center justify-between">
           <div className="flex items-center gap-2">

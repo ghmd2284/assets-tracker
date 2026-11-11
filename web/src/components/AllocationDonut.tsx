@@ -65,10 +65,12 @@ export function AllocationDonut({ summary, currency }: AllocationDonutProps) {
   return (
     <div className="bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-tile p-4 shadow-sm flex flex-col gap-3">
       {/* Header */}
-      <div className="flex items-center justify-between text-xs font-semibold border-b border-brand-divider dark:border-brand-divider-dark pb-2">
-        <span className="flex items-center gap-1.5">
-          <PieChart className="w-3.5 h-3.5 text-brand-subdued" />
-          Alokasi Portofolio
+      <div className="flex items-center justify-between text-xs font-semibold border-b border-brand-divider dark:border-brand-divider-dark pb-2.5">
+        <span className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-md bg-brand-accent-light dark:bg-brand-border-dark flex items-center justify-center">
+            <PieChart className="w-3.5 h-3.5 text-brand-primary dark:text-brand-primary-dark" />
+          </div>
+          <span>Alokasi Portofolio</span>
         </span>
         <span className="text-brand-subdued font-mono text-[11px]">
           {activeChainCount > 0 ? `${activeChainCount} Ekosistem` : 'Belum Ada Aset'}

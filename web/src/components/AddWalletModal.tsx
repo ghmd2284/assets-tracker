@@ -87,6 +87,9 @@ export function AddWalletModal({ isOpen, onClose, onSuccess }: AddWalletModalPro
       className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-japandi-fade"
     >
       <div className="w-full max-w-md bg-surface dark:bg-surface-dark border-t sm:border border-brand-border dark:border-brand-border-dark rounded-t-bento sm:rounded-bento p-5 shadow-2xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto animate-japandi-slide-up sm:animate-japandi-fade-up">
+        {/* Bottom Sheet Grabber Handle */}
+        <div className="w-10 h-1 bg-brand-border dark:bg-brand-border-dark rounded-full mx-auto -mt-1 mb-1 shrink-0" />
+
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-brand-divider dark:border-brand-divider-dark pb-3">
           <div>
@@ -168,6 +171,44 @@ export function AddWalletModal({ isOpen, onClose, onSuccess }: AddWalletModalPro
                 )}
               </div>
             )}
+
+            {/* Preset Quick-Fill Chips for Instant Experience */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pt-1 pb-0.5 text-[11px] font-mono scrollbar-none">
+              <span className="text-brand-subdued dark:text-brand-subdued-dark text-[10px] shrink-0">Preset:</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setAddressInput('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045');
+                  setLabelInput('Vitalik.eth');
+                  haptics.selection();
+                }}
+                className="px-2 py-0.5 rounded-full bg-brand-accent-light/50 dark:bg-brand-border-dark/50 hover:bg-brand-accent-light dark:hover:bg-brand-border-dark text-brand-primary dark:text-brand-primary-dark shrink-0 transition-all active:scale-95 border border-brand-border/40 dark:border-brand-border-dark/40"
+              >
+                EVM
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAddressInput('EQBynBO23ywHy_CgarY9NK9FTz0yDsGvvqq23W61hYUWjVWU');
+                  setLabelInput('TON Foundation');
+                  haptics.selection();
+                }}
+                className="px-2 py-0.5 rounded-full bg-brand-accent-light/50 dark:bg-brand-border-dark/50 hover:bg-brand-accent-light dark:hover:bg-brand-border-dark text-brand-primary dark:text-brand-primary-dark shrink-0 transition-all active:scale-95 border border-brand-border/40 dark:border-brand-border-dark/40"
+              >
+                TON
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAddressInput('4Nd1mBQtrMJVYVfKf2PJy9NZGad3TkLqcpkShG5maVe5');
+                  setLabelInput('Solana Whale');
+                  haptics.selection();
+                }}
+                className="px-2 py-0.5 rounded-full bg-brand-accent-light/50 dark:bg-brand-border-dark/50 hover:bg-brand-accent-light dark:hover:bg-brand-border-dark text-brand-primary dark:text-brand-primary-dark shrink-0 transition-all active:scale-95 border border-brand-border/40 dark:border-brand-border-dark/40"
+              >
+                Solana
+              </button>
+            </div>
 
             {/* Batch count if multiple */}
             {batchParsed.valid.length > 1 && (

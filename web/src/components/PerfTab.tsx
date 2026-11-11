@@ -60,9 +60,9 @@ export function PerfTab({ totalValueUsd, currency }: PerfTabProps) {
   const totalPeriodChangePercent = hasLiveSnapshots ? (perfData?.changePercent ?? 0) : 0;
 
   return (
-    <div className="flex flex-col gap-4 animate-in fade-in duration-150">
+    <div className="flex flex-col gap-4 animate-japandi-fade-up">
       {/* Timeframe Segmented Control (Japandi Pill) */}
-      <div className="p-1 bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-full flex items-center justify-between shadow-xs">
+      <div className="p-1 bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-full flex items-center justify-between shadow-2xs">
         {(['1D', '1W', '1M', '1Y', 'ALL'] as Timeframe[]).map((tf) => (
           <button
             key={tf}
@@ -81,20 +81,25 @@ export function PerfTab({ totalValueUsd, currency }: PerfTabProps) {
       </div>
 
       {/* Performance Summary Bento Card */}
-      <div className="bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-bento p-5 shadow-sm flex flex-col gap-3">
+      <div className="bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-bento p-5 shadow-sm flex flex-col gap-3 transition-all">
         <div className="flex items-center justify-between text-xs text-brand-subdued dark:text-brand-subdued-dark">
-          <span className="font-medium">PERFORMA PERIODE ({timeframe})</span>
-          <span className="flex items-center gap-1 font-mono text-[11px]">
-            <Clock className="w-3.5 h-3.5 text-chain-evm" />
+          <span className="font-semibold flex items-center gap-2 text-brand-primary dark:text-brand-primary-dark">
+            <div className="w-6 h-6 rounded-md bg-brand-accent-light dark:bg-brand-border-dark flex items-center justify-center">
+              <Clock className="w-3.5 h-3.5 text-brand-primary dark:text-brand-primary-dark" />
+            </div>
+            PERFORMA PERIODE ({timeframe})
+          </span>
+          <span className="flex items-center gap-1.5 font-mono text-[11px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-chain-evm animate-pulse-glow" />
             Snapshot 00:00 UTC
           </span>
         </div>
 
         <div className="flex items-baseline gap-2">
-          <span className="text-2xl font-mono font-semibold">
+          <span className="text-3xl font-mono font-semibold tracking-tight">
             {formatSignedPercent(totalPeriodChangePercent)}
           </span>
-          <span className="text-xs font-mono text-brand-subdued">
+          <span className="text-xs font-mono text-brand-subdued dark:text-brand-subdued-dark">
             ({totalPeriodChangeUsd >= 0 ? '+' : ''}{formatFiat(totalPeriodChangeUsd, currency)})
           </span>
         </div>
@@ -120,13 +125,13 @@ export function PerfTab({ totalValueUsd, currency }: PerfTabProps) {
                     aria-label={`${d.day}: ${d.changePercent >= 0 ? '+' : ''}${d.changePercent.toFixed(1)}%`}
                   >
                     {isSelected && (
-                      <div className="absolute -top-7 px-2 py-0.5 rounded-full bg-brand-primary dark:bg-brand-primary-dark text-white dark:text-brand-primary font-mono text-[10px] font-semibold whitespace-nowrap shadow-sm animate-japandi-fade-up z-10">
-                        {d.changePercent >= 0 ? '+' : ''}{d.changePercent.toFixed(1)}%
+                      <div className="absolute -top-7 px-2.5 py-0.5 rounded-full bg-brand-primary dark:bg-brand-primary-dark text-white dark:text-brand-primary font-mono text-[10px] font-semibold whitespace-nowrap shadow-md animate-japandi-fade-up z-10">
+                        {d.changePercent >= 0 ? '+' : ''}{d.changePercent.toFixed(1)}% ({d.changeUsd >= 0 ? '+' : ''}{formatFiat(d.changeUsd, currency)})
                       </div>
                     )}
                     <div
-                      className={`w-full max-w-[20px] rounded-t-sm transition-all duration-200 ${
-                        isSelected ? 'ring-2 ring-brand-primary dark:ring-brand-primary-dark scale-105' : ''
+                      className={`w-full max-w-[20px] rounded-t-md transition-all duration-200 group-hover:opacity-90 ${
+                        isSelected ? 'ring-2 ring-brand-primary dark:ring-brand-primary-dark scale-105 shadow-xs' : ''
                       } ${
                         isGain
                           ? 'bg-semantic-gain dark:bg-semantic-gain-dark'
@@ -149,11 +154,11 @@ export function PerfTab({ totalValueUsd, currency }: PerfTabProps) {
             </div>
 
             <div className="flex items-center justify-between text-[11px] font-mono text-brand-subdued pt-1">
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-semantic-gain" />
                 Gain Harian
               </span>
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-semantic-loss" />
                 Koreksi Harian
               </span>

@@ -108,6 +108,26 @@ export function SparklineChart({
           strokeLinejoin="round"
         />
 
+        {/* End-Point Live Pulse Beacon (When not scrubbing) */}
+        {!activePoint && points.length > 0 && (
+          <g>
+            <circle
+              cx={points[points.length - 1].x}
+              cy={points[points.length - 1].y}
+              r="4.5"
+              fill={strokeColor}
+              opacity="0.25"
+              className="animate-ping"
+            />
+            <circle
+              cx={points[points.length - 1].x}
+              cy={points[points.length - 1].y}
+              r="2.5"
+              fill={strokeColor}
+            />
+          </g>
+        )}
+
         {/* Scrubber Guideline & Point */}
         {activePoint && (
           <>

@@ -9,7 +9,7 @@ import {
   getChainLogoUrl,
 } from '@asset-tracker/shared';
 import { haptics } from '../lib/telegram';
-import { ChevronDown, Copy, Check, Globe } from 'lucide-react';
+import { ChevronDown, Copy, Check, Globe, Coins } from 'lucide-react';
 
 interface ChainAccordionProps {
   assets: AggregatedAsset[];
@@ -50,10 +50,17 @@ export function ChainAccordion({ assets, currency, hasWallets = false }: ChainAc
   }
 
   return (
-    <div className="bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-tile overflow-hidden shadow-sm flex flex-col">
+    <div className="bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-tile overflow-hidden shadow-sm flex flex-col transition-all">
       <div className="px-4 py-3 border-b border-brand-divider dark:border-brand-divider-dark flex items-center justify-between text-xs font-semibold">
-        <span>Aset Terkumpul ({assets.length})</span>
-        <span className="font-mono text-brand-subdued dark:text-brand-subdued-dark">Chain Abstraction</span>
+        <span className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-md bg-brand-accent-light dark:bg-brand-border-dark flex items-center justify-center">
+            <Coins className="w-3.5 h-3.5 text-brand-primary dark:text-brand-primary-dark" />
+          </div>
+          <span>Aset Terkumpul ({assets.length})</span>
+        </span>
+        <span className="px-2 py-0.5 rounded-full font-mono text-[10px] font-medium bg-brand-accent-light/60 dark:bg-brand-border-dark/60 text-brand-subdued dark:text-brand-subdued-dark border border-brand-border/40 dark:border-brand-border-dark/40">
+          Chain Abstraction
+        </span>
       </div>
 
       <div className="divide-y divide-brand-divider dark:divide-brand-divider-dark">
