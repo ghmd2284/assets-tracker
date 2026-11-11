@@ -217,13 +217,26 @@ walletRoutes.post('/', async (c) => {
     );
   }
 
-  // 5. Fetch initial balances in parallel across chains
+  // 5. Fetch initial balances (parallel for EVM & Solana, serialized for TON to prevent 429)
   try {
-    await Promise.allSettled(
-      syncTasks.map((t) =>
+    const tonTasks = syncTasks.filter((t) => t.chain === 'ton');
+    const otherTasks = syncTasks.filter((t) => t.chain !== 'ton');
+
+    const parallelOther = Promise.allSettled(
+      otherTasks.map((t) =>
         syncWatchedAddressBalances(c.env, t.watchedAddressId, t.address, t.chain)
       )
     );
+
+    const sequentialTon = (async () => {
+      for (let i = 0; i < tonTasks.length; i++) {
+        const t = tonTasks[i];
+        if (i > 0) await new Promise((r) => setTimeout(r, 1200));
+        await syncWatchedAddressBalances(c.env, t.watchedAddressId, t.address, t.chain);
+      }
+    })();
+
+    await Promise.allSettled([parallelOther, sequentialTon]);
   } catch (syncErr) {
     console.error('[Initial Parallel Sync Error]:', syncErr);
   }
@@ -408,8 +421,12 @@ walletRoutes.get('/portfolio', async (c) => {
     const blockchain = watched.blockchain as Blockchain;
     const balances = watched.token_balances || [];
 
-    // Auto-heal newly registered addresses that haven't had their initial sync yet
-    if (!watched.last_synced_at && watched.is_active) {
+    // Auto-heal un-synced addresses or addresses missing cached balances
+    const hasBalances = balances.length > 0;
+    const lastSyncedTime = watched.last_synced_at ? new Date(watched.last_synced_at).getTime() : 0;
+    const isStale = Date.now() - lastSyncedTime > 60 * 1000;
+
+    if ((!watched.last_synced_at || (!hasBalances && isStale)) && watched.is_active) {
       c.executionCtx.waitUntil(
         syncWatchedAddressBalances(c.env, watched.id, watched.address, blockchain)
       );
@@ -495,16 +512,43 @@ walletRoutes.post('/sync', async (c) => {
     .eq('user_id', user.id);
 
   if (userWallets && userWallets.length > 0) {
-    const syncPromises = userWallets.flatMap((uw: any) => {
-      const wa = uw.watched_addresses;
-      if (!wa) return [];
-      return [
-        syncWatchedAddressBalances(c.env, wa.id, wa.address, wa.blockchain),
-        syncWatchedAddressTransactions(c.env, wa.id, wa.address, wa.blockchain, { notify: true }),
-      ];
-    });
+    const validWallets = userWallets
+      .map((uw: any) => uw.watched_addresses)
+      .filter((wa: any) => Boolean(wa));
 
-    await Promise.allSettled(syncPromises);
+    const tonWallets = validWallets.filter((wa: any) => wa.blockchain === 'ton');
+    const otherWallets = validWallets.filter((wa: any) => wa.blockchain !== 'ton');
+
+    // 1. Balance Sync: EVM & Solana parallel, TON sequential with 1.2s delay to prevent Toncenter public 429
+    const otherBalancePromises = otherWallets.map((wa: any) =>
+      syncWatchedAddressBalances(c.env, wa.id, wa.address, wa.blockchain)
+    );
+
+    const tonBalanceSequence = (async () => {
+      for (let i = 0; i < tonWallets.length; i++) {
+        const wa = tonWallets[i];
+        if (i > 0) await new Promise((r) => setTimeout(r, 1200));
+        await syncWatchedAddressBalances(c.env, wa.id, wa.address, wa.blockchain);
+      }
+    })();
+
+    await Promise.allSettled([...otherBalancePromises, tonBalanceSequence]);
+
+    // 2. Transaction Sync: run in background with waitUntil so it doesn't block or race balance sync
+    c.executionCtx.waitUntil(
+      (async () => {
+        for (const wa of validWallets) {
+          try {
+            await syncWatchedAddressTransactions(c.env, wa.id, wa.address, wa.blockchain, { notify: true });
+            if (wa.blockchain === 'ton') {
+              await new Promise((r) => setTimeout(r, 1200));
+            }
+          } catch (txErr) {
+            console.warn('[Sync Tx Background Error]:', txErr);
+          }
+        }
+      })()
+    );
   }
 
   return c.json({ ok: true });

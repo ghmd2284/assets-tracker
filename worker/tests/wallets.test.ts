@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { resolveTokenPrices } from '../src/providers/prices';
 import { AlchemyProvider } from '../src/providers/alchemy';
 import { HeliusProvider } from '../src/providers/helius';
+import { TonApiProvider } from '../src/providers/tonapi';
 import { AggregatedAsset, Blockchain } from '@asset-tracker/shared';
 
 describe('Multi-Chain Asset Aggregation & Pricing Logic', () => {
@@ -107,6 +108,13 @@ describe('Multi-Chain Asset Aggregation & Pricing Logic', () => {
     const provider = new HeliusProvider();
     const balances = await provider.getBalances('HpufeAoYZaRW7iyEXvpYfxkvuvqKdYwQ2dgfbiXDdBka');
     const hasMock = balances.some((b) => b.balance === 14.5 && b.valueUsd === 2682.5);
+    expect(hasMock).toBe(false);
+  });
+
+  it('TonApiProvider does not return hardcoded mock 240 TON when API key is missing', async () => {
+    const provider = new TonApiProvider();
+    const balances = await provider.getBalances('UQBiWymIBkXDGYnnsozjT2bvQA9ygr_tDgdG2AGYAgEPcpdi');
+    const hasMock = balances.some((b) => b.balance === 240.0 && b.valueUsd === 1224.0);
     expect(hasMock).toBe(false);
   });
 });

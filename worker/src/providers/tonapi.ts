@@ -1,4 +1,4 @@
-import { Blockchain } from '@asset-tracker/shared';
+import { Blockchain, getTokenLogoUrl } from '@asset-tracker/shared';
 import { RawTokenBalance, BalanceProvider } from './types';
 import { resolveTokenPrices } from './prices';
 
@@ -8,18 +8,21 @@ export class TonApiProvider implements BalanceProvider {
   async getBalances(address: string, chain: Blockchain = 'ton'): Promise<RawTokenBalance[]> {
     const results: RawTokenBalance[] = [];
     let nativeBalanceTon: number | null = null;
+    let rpcSucceeded = false;
 
     // 1. Try TonAPI.io (if apiKey configured)
     if (this.apiKey) {
       try {
         const accountRes = await fetch(`https://tonapi.io/v2/accounts/${encodeURIComponent(address)}`, {
           headers: { Authorization: `Bearer ${this.apiKey}` },
+          signal: AbortSignal.timeout(5000),
         });
 
         if (accountRes.ok) {
           const accountData = await accountRes.json<any>();
           if (accountData?.balance !== undefined) {
             nativeBalanceTon = Number(accountData.balance) / 1e9;
+            rpcSucceeded = true;
           }
         }
       } catch (err) {
@@ -27,31 +30,40 @@ export class TonApiProvider implements BalanceProvider {
       }
     }
 
-    // 2. Fallback to official public Toncenter RPC if balance not yet resolved
+    // 2. Fallback to official public Toncenter RPC (v2 & v3)
     if (nativeBalanceTon === null) {
+      // 2a. Try Toncenter v2
       try {
         const tc2Res = await fetch(
-          `https://toncenter.com/api/v2/getAddressInformation?address=${encodeURIComponent(address)}`
+          `https://toncenter.com/api/v2/getAddressInformation?address=${encodeURIComponent(address)}`,
+          { signal: AbortSignal.timeout(5000) }
         );
         if (tc2Res.ok) {
           const tc2Data = await tc2Res.json<any>();
           if (tc2Data?.ok && tc2Data?.result?.balance !== undefined) {
             nativeBalanceTon = Number(tc2Data.result.balance) / 1e9;
+            rpcSucceeded = true;
           }
+        } else if (tc2Res.status === 429) {
+          console.warn('[TonAPI Provider] toncenter v2 429 rate limit, waiting before trying v3...');
+          await new Promise((r) => setTimeout(r, 1100));
         }
       } catch (tcErr) {
         console.warn('[TonAPI Provider] toncenter v2 error, trying v3:', tcErr);
       }
 
+      // 2b. Try Toncenter v3 if v2 didn't resolve
       if (nativeBalanceTon === null) {
         try {
           const tc3Res = await fetch(
-            `https://toncenter.com/api/v3/account?address=${encodeURIComponent(address)}`
+            `https://toncenter.com/api/v3/account?address=${encodeURIComponent(address)}`,
+            { signal: AbortSignal.timeout(5000) }
           );
           if (tc3Res.ok) {
             const tc3Data = await tc3Res.json<any>();
             if (tc3Data?.balance !== undefined) {
               nativeBalanceTon = Number(tc3Data.balance) / 1e9;
+              rpcSucceeded = true;
             }
           }
         } catch (tc3Err) {
@@ -60,8 +72,13 @@ export class TonApiProvider implements BalanceProvider {
       }
     }
 
-    // If native TON balance is found (even if 0, record it)
-    if (nativeBalanceTon !== null && nativeBalanceTon >= 0) {
+    // If RPC failed completely, throw so caller knows NOT to wipe cached balance
+    if (!rpcSucceeded && nativeBalanceTon === null) {
+      throw new Error(`TonApiProvider: All RPC endpoints failed or were rate-limited for ${address}`);
+    }
+
+    // If native TON balance is found and > 0, record it
+    if (nativeBalanceTon !== null && nativeBalanceTon > 0) {
       results.push({
         symbol: 'TON',
         name: 'Toncoin',
@@ -72,7 +89,7 @@ export class TonApiProvider implements BalanceProvider {
         decimals: 9,
         priceUsd: 1.15,
         valueUsd: Number((nativeBalanceTon * 1.15).toFixed(2)),
-        logoUrl: 'https://cryptologos.cc/logos/toncoin-ton-logo.png',
+        logoUrl: getTokenLogoUrl('TON', 'https://cryptologos.cc/logos/toncoin-ton-logo.png'),
         isSpam: false,
       });
     }
@@ -82,7 +99,10 @@ export class TonApiProvider implements BalanceProvider {
       try {
         const jettonsRes = await fetch(
           `https://tonapi.io/v2/accounts/${encodeURIComponent(address)}/jettons`,
-          { headers: { Authorization: `Bearer ${this.apiKey}` } }
+          {
+            headers: { Authorization: `Bearer ${this.apiKey}` },
+            signal: AbortSignal.timeout(5000),
+          }
         );
 
         if (jettonsRes.ok) {
@@ -118,39 +138,23 @@ export class TonApiProvider implements BalanceProvider {
     }
 
     // 4. Resolve live token prices
-    try {
-      const priceMap = await resolveTokenPrices(results);
-      for (const item of results) {
-        const key = `${item.blockchain}:${item.contractAddress || item.symbol}`;
-        const priceInfo = priceMap.get(key);
-        if (priceInfo && priceInfo.priceUsd > 0) {
-          item.priceUsd = priceInfo.priceUsd;
-          item.valueUsd = Number((item.balance * priceInfo.priceUsd).toFixed(2));
-          item.isSpam = priceInfo.isSpam;
+    if (results.length > 0) {
+      try {
+        const priceMap = await resolveTokenPrices(results);
+        for (const item of results) {
+          const key = `${item.blockchain}:${item.contractAddress || item.symbol}`;
+          const priceInfo = priceMap.get(key);
+          if (priceInfo && priceInfo.priceUsd > 0) {
+            item.priceUsd = priceInfo.priceUsd;
+            item.valueUsd = Number((item.balance * priceInfo.priceUsd).toFixed(2));
+            item.isSpam = priceInfo.isSpam;
+          }
         }
+      } catch (pErr) {
+        console.warn('[TonAPI Provider] Price resolution error:', pErr);
       }
-    } catch (pErr) {
-      console.warn('[TonAPI Provider] Price resolution error:', pErr);
     }
 
     return results;
   }
-
-  private getMockBalances(address: string): RawTokenBalance[] {
-    return [
-      {
-        symbol: 'TON',
-        name: 'Toncoin',
-        contractAddress: null,
-        blockchain: 'ton',
-        balance: 240.0,
-        balanceFormatted: '240.0000',
-        decimals: 9,
-        priceUsd: 5.1,
-        valueUsd: 1224.0,
-        isSpam: false,
-      },
-    ];
-  }
 }
-

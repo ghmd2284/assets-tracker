@@ -86,6 +86,10 @@ export class AlchemyProvider implements BalanceProvider {
         }
       }
 
+      if (rawResult === null && !this.apiKey) {
+        throw new Error(`AlchemyProvider: All RPC endpoints failed for ${chain} on ${address}`);
+      }
+
       if (rawResult) {
         const rawWei = BigInt(rawResult);
         const balance = Number(rawWei) / 10 ** nativeInfo.decimals;

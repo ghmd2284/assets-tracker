@@ -127,24 +127,44 @@ export async function syncWatchedAddressTransactions(
     }
   } else if (blockchain === 'solana') {
     try {
-      const rpcUrl = env.HELIUS_API_KEY
-        ? `https://mainnet.helius-rpc.com/?api-key=${env.HELIUS_API_KEY}`
-        : 'https://api.mainnet-beta.solana.com';
+      const rpcUrls = env.HELIUS_API_KEY
+        ? [`https://mainnet.helius-rpc.com/?api-key=${env.HELIUS_API_KEY}`]
+        : [
+            'https://api.mainnet-beta.solana.com',
+            'https://solana-rpc.publicnode.com',
+            'https://api.mainnet.solana.com',
+          ];
 
-      const sigRes = await fetch(rpcUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'getSignaturesForAddress',
-          params: [address, { limit: 10 }],
-        }),
-      });
+      let signatures: any[] = [];
+      let activeRpcUrl = rpcUrls[0];
+      for (const rpcUrl of rpcUrls) {
+        try {
+          const sigRes = await fetch(rpcUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: AbortSignal.timeout(5000),
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              id: 1,
+              method: 'getSignaturesForAddress',
+              params: [address, { limit: 10 }],
+            }),
+          });
 
-      if (sigRes.ok) {
-        const sigData = await sigRes.json<any>();
-        const signatures = sigData?.result || [];
+          if (sigRes.ok) {
+            const sigData = await sigRes.json<any>();
+            if (sigData?.result) {
+              signatures = sigData.result;
+              activeRpcUrl = rpcUrl;
+              break;
+            }
+          }
+        } catch {
+          // try next rpc
+        }
+      }
+
+      if (signatures.length > 0) {
 
         const { data: subscribers } = await supabase
           .from('user_wallets')
@@ -177,7 +197,7 @@ export async function syncWatchedAddressTransactions(
           if (existing) continue;
 
           try {
-            const txRes = await fetch(rpcUrl, {
+            const txRes = await fetch(activeRpcUrl, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
