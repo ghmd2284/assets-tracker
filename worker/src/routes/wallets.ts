@@ -12,9 +12,12 @@ import {
   MutationTransaction,
   PortfolioSnapshot,
   PerformanceResponse,
+  truncateAddress,
 } from '@asset-tracker/shared';
 import { fetchChainBalances, getUsdToIdrRate } from '../providers';
 import { syncWatchedAddressBalances } from '../lib/syncBalances';
+import { syncWatchedAddressTransactions } from '../lib/syncTransactions';
+import { escapeHtml, sendTelegramNotification } from '../lib/telegramBot';
 
 export const walletRoutes = new Hono<{
   Bindings: Env;
@@ -182,10 +185,45 @@ walletRoutes.post('/', async (c) => {
         // 3. Fetch initial balances and cache into token_balances synchronously
         try {
           await syncWatchedAddressBalances(c.env, watchedAddr.id, item.normalized, chain);
+          // 4. Backfill initial transaction history asynchronously
+          c.executionCtx.waitUntil(
+            syncWatchedAddressTransactions(c.env, watchedAddr.id, item.normalized, chain, {
+              notify: false,
+            })
+          );
         } catch (syncErr) {
           console.error('[Initial Sync Error]:', syncErr);
         }
       }
+    }
+  }
+
+  // Send Telegram confirmation notification to the user
+  if (createdWallets.length > 0) {
+    try {
+      const descriptions = createdWallets
+        .map(
+          (w) =>
+            `• <b>${escapeHtml(w.label)}</b> (${w.blockchain.toUpperCase()}): <code>${truncateAddress(w.address, 6, 4)}</code>`
+        )
+        .join('\n');
+
+      const confirmMsg = `
+🌿 <b>Dompet Berhasil Ditambahkan</b>
+━━━━━━━━━━━━━━━━━━━━
+${descriptions}
+
+🔔 <i>Notifikasi mutasi real-time otomatis aktif untuk dompet ini.</i>
+`.trim();
+
+      await sendTelegramNotification(
+        c.env.TELEGRAM_BOT_TOKEN,
+        user.id,
+        confirmMsg,
+        c.env.MINI_APP_URL
+      );
+    } catch (notifErr) {
+      console.warn('[Wallet Added Notification Error]:', notifErr);
     }
   }
 
@@ -405,7 +443,7 @@ walletRoutes.get('/portfolio', async (c) => {
   return c.json({ summary, assets });
 });
 
-// POST /api/wallets/sync - Manually re-sync balances for all user's watched addresses
+// POST /api/wallets/sync - Manually re-sync balances and check for new transactions
 walletRoutes.post('/sync', async (c) => {
   const { user } = c.get('telegramAuth');
   const supabase = getSupabaseClient(c.env);
@@ -416,10 +454,13 @@ walletRoutes.post('/sync', async (c) => {
     .eq('user_id', user.id);
 
   if (userWallets && userWallets.length > 0) {
-    const syncPromises = userWallets.map((uw: any) => {
+    const syncPromises = userWallets.flatMap((uw: any) => {
       const wa = uw.watched_addresses;
-      if (!wa) return Promise.resolve();
-      return syncWatchedAddressBalances(c.env, wa.id, wa.address, wa.blockchain);
+      if (!wa) return [];
+      return [
+        syncWatchedAddressBalances(c.env, wa.id, wa.address, wa.blockchain),
+        syncWatchedAddressTransactions(c.env, wa.id, wa.address, wa.blockchain, { notify: true }),
+      ];
     });
 
     await Promise.allSettled(syncPromises);
@@ -455,6 +496,26 @@ walletRoutes.get('/transactions', async (c) => {
 
   if (error) {
     return c.json({ error: error.message }, 500);
+  }
+
+  // 3. Auto-backfill transactions in background if empty
+  if ((!txList || txList.length === 0) && watchedIds.length > 0) {
+    const { data: waList } = await supabase
+      .from('watched_addresses')
+      .select('id, address, blockchain')
+      .in('id', watchedIds);
+
+    if (waList) {
+      c.executionCtx.waitUntil(
+        Promise.allSettled(
+          waList.map((wa: any) =>
+            syncWatchedAddressTransactions(c.env, wa.id, wa.address, wa.blockchain as Blockchain, {
+              notify: false,
+            })
+          )
+        )
+      );
+    }
   }
 
   const transactions: MutationTransaction[] = (txList || []).map((tx: any) => ({

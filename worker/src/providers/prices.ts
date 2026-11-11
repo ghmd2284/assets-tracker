@@ -98,7 +98,9 @@ export async function resolveTokenPrices(
 
     if (llamaIds) {
       try {
-        const llamaRes = await fetch(`https://coins.llama.fi/prices/current/${llamaIds}`);
+        const llamaRes = await fetch(`https://coins.llama.fi/prices/current/${llamaIds}`, {
+          signal: AbortSignal.timeout(1500),
+        });
         if (llamaRes.ok) {
           const llamaData = await llamaRes.json<any>();
           for (const sym of nativeToFetch) {

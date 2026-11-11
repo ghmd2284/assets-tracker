@@ -37,8 +37,20 @@ export function getExplorerTxUrl(chain: Blockchain, txHash: string): string {
       return `https://arbiscan.io/tx/${txHash}`;
     case 'polygon':
       return `https://polygonscan.com/tx/${txHash}`;
-    case 'ton':
-      return `https://tonviewer.com/transaction/${txHash}`;
+    case 'ton': {
+      let hexHash = txHash;
+      if (txHash.length === 44 && txHash.includes('=')) {
+        try {
+          const bin = atob(txHash);
+          hexHash = Array.from(bin)
+            .map((c) => c.charCodeAt(0).toString(16).padStart(2, '0'))
+            .join('');
+        } catch {
+          // fallback to raw hash if decoding fails
+        }
+      }
+      return `https://tonviewer.com/transaction/${hexHash}`;
+    }
     case 'solana':
       return `https://solscan.io/tx/${txHash}`;
     default:

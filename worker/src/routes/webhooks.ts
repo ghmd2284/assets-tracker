@@ -121,9 +121,9 @@ export async function processMutation(
         const u = (item as any).users;
         if (!u || u.is_banned) continue;
 
-        const minAlert = Number(u.min_alert_usd) || 1.0;
-        // Dust filter: if USD amount is known and below min_alert_usd, skip push notification
-        if (amountUsd !== undefined && amountUsd < minAlert) {
+        const minAlert = typeof u.min_alert_usd === 'number' ? u.min_alert_usd : 0;
+        // Dust filter: if USD amount is known and threshold is set, skip if below min_alert_usd
+        if (amountUsd !== undefined && minAlert > 0 && amountUsd < minAlert) {
           continue;
         }
 
