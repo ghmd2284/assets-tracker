@@ -1,4 +1,4 @@
-import { UserProfile, WatchedWallet, AggregatedAsset, PortfolioSummary } from '@asset-tracker/shared';
+import { UserProfile, WatchedWallet, AggregatedAsset, PortfolioSummary, MutationTransaction } from '@asset-tracker/shared';
 import { getTelegramInitData } from './telegram';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -105,4 +105,22 @@ export async function fetchPortfolio(): Promise<{
   }
 
   return apiFetch('/api/wallets/portfolio');
+}
+
+/**
+ * Fetches recent transactions for the user's tracked wallets.
+ */
+export async function fetchTransactions(limit = 10): Promise<MutationTransaction[]> {
+  const initData = getTelegramInitData();
+  if (!initData) return [];
+
+  try {
+    const result = await apiFetch<{ transactions: MutationTransaction[] }>(
+      `/api/wallets/transactions?limit=${limit}`
+    );
+    return result.transactions || [];
+  } catch (err) {
+    console.warn('[Transactions Fetch Info] Fallback to empty list:', err);
+    return [];
+  }
 }

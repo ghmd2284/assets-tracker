@@ -99,3 +99,4 @@ export function WalletList({ wallets, onRefresh }: WalletListProps) {
     </div>
   );
 }
+

@@ -17,3 +17,4 @@ export interface RawTokenBalance {
 export interface BalanceProvider {
   getBalances(address: string, chain: Blockchain): Promise<RawTokenBalance[]>;
 }
+

@@ -8,6 +8,7 @@ import {
   AggregatedAsset,
   PortfolioSummary,
   WatchedWallet,
+  MutationTransaction,
 } from '@asset-tracker/shared';
 import { fetchChainBalances, getUsdToIdrRate } from '../providers';
 
@@ -363,4 +364,49 @@ walletRoutes.get('/portfolio', async (c) => {
   );
 
   return c.json({ summary, assets });
+});
+
+// GET /api/wallets/transactions - Recent transactions for user's watched wallets
+walletRoutes.get('/transactions', async (c) => {
+  const { user } = c.get('telegramAuth');
+  const supabase = getSupabaseClient(c.env);
+
+  // 1. Get all watched_address_ids for this user
+  const { data: uwList } = await supabase
+    .from('user_wallets')
+    .select('watched_address_id')
+    .eq('user_id', user.id);
+
+  if (!uwList || uwList.length === 0) {
+    return c.json({ transactions: [] });
+  }
+
+  const watchedIds = uwList.map((uw) => uw.watched_address_id);
+
+  // 2. Fetch latest 10 transactions
+  const { data: txList, error } = await supabase
+    .from('transactions')
+    .select('*')
+    .in('watched_address_id', watchedIds)
+    .order('timestamp', { ascending: false })
+    .limit(10);
+
+  if (error) {
+    return c.json({ error: error.message }, 500);
+  }
+
+  const transactions: MutationTransaction[] = (txList || []).map((tx: any) => ({
+    id: tx.id,
+    txHash: tx.tx_hash,
+    blockchain: tx.blockchain as Blockchain,
+    direction: tx.direction,
+    tokenSymbol: tx.token_symbol,
+    amount: Number(tx.amount),
+    amountUsd: tx.amount_usd ? Number(tx.amount_usd) : undefined,
+    fromAddress: tx.from_address,
+    toAddress: tx.to_address,
+    timestamp: tx.timestamp,
+  }));
+
+  return c.json({ transactions });
 });

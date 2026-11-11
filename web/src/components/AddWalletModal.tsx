@@ -197,3 +197,4 @@ export function AddWalletModal({ isOpen, onClose, onSuccess }: AddWalletModalPro
     </div>
   );
 }
+

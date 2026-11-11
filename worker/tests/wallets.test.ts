@@ -94,3 +94,4 @@ describe('Multi-Chain Asset Aggregation & Pricing Logic', () => {
     expect(priceMap.get('ethereum:ETH')?.isSpam).toBe(false);
   });
 });
+

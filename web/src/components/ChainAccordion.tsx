@@ -149,3 +149,4 @@ export function ChainAccordion({ assets, currency }: ChainAccordionProps) {
     </div>
   );
 }
+
