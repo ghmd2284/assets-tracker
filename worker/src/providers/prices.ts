@@ -51,8 +51,16 @@ export async function getUsdToIdrRate(): Promise<number> {
   return idrRateCache.rate;
 }
 
+const NATIVE_COINGECKO_MAP: Record<string, string> = {
+  TON: 'the-open-network',
+  ETH: 'ethereum',
+  SOL: 'solana',
+  BNB: 'binancecoin',
+  POL: 'matic-network',
+};
+
 /**
- * Resolves live prices and spam status using DexScreener & CoinGecko.
+ * Resolves live prices and spam status using DexScreener & DeFiLlama.
  */
 export async function resolveTokenPrices(
   tokens: { symbol: string; contractAddress: string | null; blockchain: Blockchain }[]
@@ -60,6 +68,7 @@ export async function resolveTokenPrices(
   const results = new Map<string, { priceUsd: number; isSpam: boolean }>();
   const now = Date.now();
   const toFetchContracts: string[] = [];
+  const nativeToFetch = new Set<string>();
 
   for (const token of tokens) {
     const key = `${token.blockchain}:${token.contractAddress || token.symbol}`;
@@ -72,13 +81,58 @@ export async function resolveTokenPrices(
 
     // Native token without contract
     if (!token.contractAddress) {
-      const fallbackPrice = NATIVE_FALLBACK_PRICES[token.symbol.toUpperCase()] || 0;
-      results.set(key, { priceUsd: fallbackPrice, isSpam: false });
-      priceCache.set(key, { priceUsd: fallbackPrice, isSpam: false, timestamp: now });
+      nativeToFetch.add(token.symbol.toUpperCase());
       continue;
     }
 
     toFetchContracts.push(token.contractAddress);
+  }
+
+  // Fetch live native token prices via DeFiLlama
+  if (nativeToFetch.size > 0) {
+    const llamaIds = Array.from(nativeToFetch)
+      .map((sym) => NATIVE_COINGECKO_MAP[sym])
+      .filter(Boolean)
+      .map((id) => `coingecko:${id}`)
+      .join(',');
+
+    if (llamaIds) {
+      try {
+        const llamaRes = await fetch(`https://coins.llama.fi/prices/current/${llamaIds}`);
+        if (llamaRes.ok) {
+          const llamaData = await llamaRes.json<any>();
+          for (const sym of nativeToFetch) {
+            const cgId = NATIVE_COINGECKO_MAP[sym];
+            const livePrice = llamaData?.coins?.[`coingecko:${cgId}`]?.price;
+            if (typeof livePrice === 'number' && livePrice > 0) {
+              for (const token of tokens) {
+                if (!token.contractAddress && token.symbol.toUpperCase() === sym) {
+                  const key = `${token.blockchain}:${token.symbol}`;
+                  results.set(key, { priceUsd: livePrice, isSpam: false });
+                  priceCache.set(key, { priceUsd: livePrice, isSpam: false, timestamp: now });
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[Price Service] DeFiLlama native fetch error, using fallbacks:', err);
+      }
+    }
+
+    // Apply baseline fallbacks for any native tokens not retrieved
+    for (const sym of nativeToFetch) {
+      for (const token of tokens) {
+        if (!token.contractAddress && token.symbol.toUpperCase() === sym) {
+          const key = `${token.blockchain}:${token.symbol}`;
+          if (!results.has(key)) {
+            const fallbackPrice = NATIVE_FALLBACK_PRICES[sym] || 0;
+            results.set(key, { priceUsd: fallbackPrice, isSpam: false });
+            priceCache.set(key, { priceUsd: fallbackPrice, isSpam: false, timestamp: now });
+          }
+        }
+      }
+    }
   }
 
   if (toFetchContracts.length === 0) {

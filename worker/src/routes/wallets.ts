@@ -179,10 +179,12 @@ walletRoutes.post('/', async (c) => {
           label,
         });
 
-        // 3. Fetch initial balances and cache into token_balances (async / non-blocking)
-        c.executionCtx.waitUntil(
-          syncWatchedAddressBalances(c.env, watchedAddr.id, item.normalized, chain)
-        );
+        // 3. Fetch initial balances and cache into token_balances synchronously
+        try {
+          await syncWatchedAddressBalances(c.env, watchedAddr.id, item.normalized, chain);
+        } catch (syncErr) {
+          console.error('[Initial Sync Error]:', syncErr);
+        }
       }
     }
   }
@@ -327,6 +329,13 @@ walletRoutes.get('/portfolio', async (c) => {
     const blockchain = watched.blockchain as Blockchain;
     const balances = watched.token_balances || [];
 
+    // Auto-heal empty token balance cache in background
+    if (balances.length === 0 && watched.is_active) {
+      c.executionCtx.waitUntil(
+        syncWatchedAddressBalances(c.env, watched.id, watched.address, blockchain)
+      );
+    }
+
     for (const bal of balances) {
       if (bal.is_spam) continue; // Filter scam tokens
 
@@ -394,6 +403,29 @@ walletRoutes.get('/portfolio', async (c) => {
   );
 
   return c.json({ summary, assets });
+});
+
+// POST /api/wallets/sync - Manually re-sync balances for all user's watched addresses
+walletRoutes.post('/sync', async (c) => {
+  const { user } = c.get('telegramAuth');
+  const supabase = getSupabaseClient(c.env);
+
+  const { data: userWallets } = await supabase
+    .from('user_wallets')
+    .select('watched_address_id, watched_addresses(id, address, blockchain)')
+    .eq('user_id', user.id);
+
+  if (userWallets && userWallets.length > 0) {
+    const syncPromises = userWallets.map((uw: any) => {
+      const wa = uw.watched_addresses;
+      if (!wa) return Promise.resolve();
+      return syncWatchedAddressBalances(c.env, wa.id, wa.address, wa.blockchain);
+    });
+
+    await Promise.allSettled(syncPromises);
+  }
+
+  return c.json({ ok: true });
 });
 
 // GET /api/wallets/transactions - Recent transactions for user's watched wallets

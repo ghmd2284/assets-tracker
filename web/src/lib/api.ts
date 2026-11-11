@@ -90,6 +90,24 @@ export async function deleteWallet(walletId: string): Promise<boolean> {
 }
 
 /**
+ * Triggers a real-time balance re-sync across all watched addresses.
+ */
+export async function syncBalances(): Promise<boolean> {
+  const initData = getTelegramInitData();
+  if (!initData) return false;
+
+  try {
+    await apiFetch('/api/wallets/sync', {
+      method: 'POST',
+    });
+    return true;
+  } catch (err) {
+    console.warn('[Sync Balances Warning]:', err);
+    return false;
+  }
+}
+
+/**
  * Fetches the aggregated multi-chain portfolio.
  */
 export async function fetchPortfolio(): Promise<{

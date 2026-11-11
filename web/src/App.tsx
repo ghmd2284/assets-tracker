@@ -5,7 +5,7 @@ import {
   haptics,
   syncTheme,
 } from './lib/telegram';
-import { syncUserProfile, fetchPortfolio, fetchWallets, fetchTransactions } from './lib/api';
+import { syncUserProfile, fetchPortfolio, fetchWallets, fetchTransactions, syncBalances } from './lib/api';
 import {
   formatFiat,
   formatSignedPercent,
@@ -179,9 +179,12 @@ export function App() {
     },
   ];
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (withSync = false) => {
     setLoading(true);
     try {
+      if (withSync) {
+        await syncBalances();
+      }
       const [port, wList, txList] = await Promise.all([
         fetchPortfolio(),
         fetchWallets(),
@@ -291,10 +294,10 @@ export function App() {
           <button
             onClick={() => {
               haptics.impact('light');
-              loadData();
+              loadData(true);
             }}
             className="p-1.5 rounded-full border border-brand-border dark:border-brand-border-dark bg-surface dark:bg-surface-dark text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark transition-colors"
-            title="Muat ulang data"
+            title="Muat ulang dan sinkronkan data"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -391,7 +394,16 @@ export function App() {
             </div>
 
             {/* Chain Abstraction Accordion */}
-            <ChainAccordion assets={currentAssets} currency={currency} />
+            <ChainAccordion
+              assets={currentAssets}
+              currency={currency}
+              hasWallets={wallets.length > 0}
+            />
+
+            {/* Connected Wallets List (Watch-Only) */}
+            {!isDemoMode && wallets.length > 0 && (
+              <WalletList wallets={wallets} onRefresh={loadData} />
+            )}
 
             {/* Recent Mutations Activity */}
             <RecentTransactions

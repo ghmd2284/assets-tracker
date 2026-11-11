@@ -6,9 +6,10 @@ import { ChevronDown, Copy, Check, ExternalLink } from 'lucide-react';
 interface ChainAccordionProps {
   assets: AggregatedAsset[];
   currency: CurrencyPref;
+  hasWallets?: boolean;
 }
 
-export function ChainAccordion({ assets, currency }: ChainAccordionProps) {
+export function ChainAccordion({ assets, currency, hasWallets = false }: ChainAccordionProps) {
   const [expandedSymbol, setExpandedSymbol] = useState<string | null>(null);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
@@ -27,7 +28,9 @@ export function ChainAccordion({ assets, currency }: ChainAccordionProps) {
   if (assets.length === 0) {
     return (
       <div className="bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-tile p-5 text-center text-xs text-brand-subdued dark:text-brand-subdued-dark">
-        Belum ada aset terdeteksi. Tambahkan alamat dompet untuk mulai memantau saldo.
+        {hasWallets
+          ? 'Dompet terhubung. Sedang menyinkronkan saldo atau bernilai $0. Tekan tombol segarkan di kanan atas untuk memuat ulang.'
+          : 'Belum ada aset terdeteksi. Tambahkan alamat dompet untuk mulai memantau saldo.'}
       </div>
     );
   }
