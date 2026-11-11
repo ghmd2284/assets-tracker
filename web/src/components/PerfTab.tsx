@@ -41,20 +41,9 @@ export function PerfTab({ totalValueUsd, currency }: PerfTabProps) {
     haptics.selection();
   };
 
-  // Sample fallback data if history is newly starting
-  const fallbackBars = [
-    { day: 'Sen', changePercent: 1.2, changeUsd: 145 },
-    { day: 'Sel', changePercent: -0.8, changeUsd: -95 },
-    { day: 'Rab', changePercent: 2.5, changeUsd: 310 },
-    { day: 'Kam', changePercent: 0.4, changeUsd: 50 },
-    { day: 'Jum', changePercent: -1.5, changeUsd: -180 },
-    { day: 'Sab', changePercent: 1.8, changeUsd: 220 },
-    { day: 'Min', changePercent: 2.45, changeUsd: 295 },
-  ];
-
   const hasLiveSnapshots = perfData?.snapshots && perfData.snapshots.length >= 2;
 
-  // Build bars from live snapshots or fallback
+  // Build bars from live snapshots
   const barData = hasLiveSnapshots
     ? perfData.snapshots.slice(1).map((s, idx) => {
         const prev = perfData.snapshots[idx].totalValueUsd;
@@ -63,15 +52,10 @@ export function PerfTab({ totalValueUsd, currency }: PerfTabProps) {
         const day = new Date(s.recordedAt).toLocaleDateString('id-ID', { weekday: 'short' });
         return { day, changePercent, changeUsd };
       })
-    : fallbackBars;
+    : [];
 
-  const totalPeriodChangeUsd = hasLiveSnapshots
-    ? (perfData?.changeUsd ?? 0)
-    : barData.reduce((acc, d) => acc + d.changeUsd, 0);
-
-  const totalPeriodChangePercent = hasLiveSnapshots
-    ? (perfData?.changePercent ?? 0)
-    : (totalPeriodChangeUsd / (totalValueUsd || 1)) * 100;
+  const totalPeriodChangeUsd = hasLiveSnapshots ? (perfData?.changeUsd ?? 0) : 0;
+  const totalPeriodChangePercent = hasLiveSnapshots ? (perfData?.changePercent ?? 0) : 0;
 
   return (
     <div className="flex flex-col gap-4 animate-in fade-in duration-150">
@@ -112,42 +96,48 @@ export function PerfTab({ totalValueUsd, currency }: PerfTabProps) {
         </div>
 
         {/* Daily Profit / Loss Bar Chart */}
-        <div className="pt-2 flex flex-col gap-2">
-          <div className="flex items-end justify-between gap-2 h-28 pt-4 pb-1 border-b border-brand-divider dark:border-brand-divider-dark">
-            {barData.map((d, idx) => {
-              const isGain = d.changePercent >= 0;
-              const absHeight = Math.min(Math.max(Math.abs(d.changePercent) * 22, 10), 80);
+        {hasLiveSnapshots && barData.length > 0 ? (
+          <div className="pt-2 flex flex-col gap-2">
+            <div className="flex items-end justify-between gap-2 h-28 pt-4 pb-1 border-b border-brand-divider dark:border-brand-divider-dark">
+              {barData.map((d, idx) => {
+                const isGain = d.changePercent >= 0;
+                const absHeight = Math.min(Math.max(Math.abs(d.changePercent) * 22, 10), 80);
 
-              return (
-                <div key={idx} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
-                  <div
-                    className={`w-full max-w-[20px] rounded-t-sm transition-all duration-300 ${
-                      isGain
-                        ? 'bg-semantic-gain dark:bg-semantic-gain-dark'
-                        : 'bg-semantic-loss dark:bg-semantic-loss-dark'
-                    }`}
-                    style={{ height: `${absHeight}px` }}
-                    title={`${d.day}: ${d.changePercent >= 0 ? '+' : ''}${d.changePercent.toFixed(1)}%`}
-                  />
-                  <span className="text-[10px] font-mono text-brand-subdued mt-1">
-                    {d.day}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+                return (
+                  <div key={idx} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+                    <div
+                      className={`w-full max-w-[20px] rounded-t-sm transition-all duration-300 ${
+                        isGain
+                          ? 'bg-semantic-gain dark:bg-semantic-gain-dark'
+                          : 'bg-semantic-loss dark:bg-semantic-loss-dark'
+                      }`}
+                      style={{ height: `${absHeight}px` }}
+                      title={`${d.day}: ${d.changePercent >= 0 ? '+' : ''}${d.changePercent.toFixed(1)}%`}
+                    />
+                    <span className="text-[10px] font-mono text-brand-subdued mt-1">
+                      {d.day}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
 
-          <div className="flex items-center justify-between text-[11px] font-mono text-brand-subdued pt-1">
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-semantic-gain" />
-              Gain Harian
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-semantic-loss" />
-              Koreksi Harian
-            </span>
+            <div className="flex items-center justify-between text-[11px] font-mono text-brand-subdued pt-1">
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-semantic-gain" />
+                Gain Harian
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-semantic-loss" />
+                Koreksi Harian
+              </span>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="py-6 text-center text-xs text-brand-subdued border-t border-brand-divider dark:border-brand-divider-dark mt-2">
+            Belum ada snapshot historis untuk rentang ini. Data performa harian akan mulai diakumulasikan setiap pukul 00:00 UTC.
+          </div>
+        )}
       </div>
 
       {/* Snapshot Information Card */}

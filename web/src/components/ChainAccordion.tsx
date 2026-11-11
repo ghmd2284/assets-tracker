@@ -61,6 +61,15 @@ export function ChainAccordion({ assets, currency, hasWallets = false }: ChainAc
           const isExpanded = expandedSymbol === asset.symbol;
           const chainCount = asset.chains.length;
           const logoUrl = getTokenLogoUrl(asset.symbol, asset.logoUrl);
+          const singleChain = asset.chains[0]?.blockchain;
+          const isNativeSingle =
+            chainCount === 1 &&
+            ((asset.symbol === 'ETH' && singleChain === 'ethereum') ||
+              (asset.symbol === 'BNB' && singleChain === 'bsc') ||
+              (asset.symbol === 'POL' && singleChain === 'polygon') ||
+              (asset.symbol === 'MATIC' && singleChain === 'polygon') ||
+              (asset.symbol === 'SOL' && singleChain === 'solana') ||
+              (asset.symbol === 'TON' && singleChain === 'ton'));
 
           return (
             <div key={asset.symbol} className="flex flex-col">
@@ -71,41 +80,52 @@ export function ChainAccordion({ assets, currency, hasWallets = false }: ChainAc
                 className="px-4 py-3 w-full flex items-center justify-between text-left hover:bg-canvas/50 dark:hover:bg-canvas-dark/50 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  {/* Crypto Emblem Avatar with Small World / Network Badge */}
+                  {/* Crypto Emblem Avatar with Anti-Blank Architecture */}
                   <div className="relative w-9 h-9 shrink-0">
-                    <div className="w-9 h-9 rounded-full bg-surface-dim dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark flex items-center justify-center font-mono font-semibold text-xs text-brand-primary dark:text-brand-primary-dark overflow-hidden shadow-xs">
-                      {logoUrl ? (
+                    <div className="w-9 h-9 rounded-full bg-surface-dim dark:bg-surface-container-high-dark border border-brand-border dark:border-brand-border-dark flex items-center justify-center font-mono font-bold text-xs text-brand-primary dark:text-brand-primary-dark overflow-hidden shadow-xs relative">
+                      {/* Initials Fallback (Always present behind image) */}
+                      <span className="uppercase select-none text-[11px]">
+                        {asset.symbol.slice(0, 2)}
+                      </span>
+
+                      {/* Official Token Logo Image */}
+                      {logoUrl && (
                         <img
                           src={logoUrl}
                           alt={asset.symbol}
-                          className="w-full h-full object-cover"
+                          className="absolute inset-0 w-full h-full object-cover rounded-full"
                           onError={(e) => {
                             (e.target as HTMLElement).style.display = 'none';
                           }}
                         />
-                      ) : (
-                        asset.symbol.slice(0, 2)
                       )}
                     </div>
 
-                    {/* Small World / Network Badge in the Bottom-Right Corner */}
-                    <div
-                      className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark flex items-center justify-center shadow-xs overflow-hidden"
-                      title={chainCount > 1 ? `${chainCount} Jaringan (Multi-Chain)` : asset.chains[0]?.blockchain}
-                    >
-                      {chainCount > 1 ? (
+                    {/* Small World Badge (for Multi-Chain) or L2 Network Badge */}
+                    {chainCount > 1 ? (
+                      <div
+                        className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark flex items-center justify-center shadow-xs overflow-hidden"
+                        title={`${chainCount} Jaringan (Multi-Chain)`}
+                      >
                         <Globe className="w-2.5 h-2.5 text-brand-primary dark:text-brand-primary-dark" />
-                      ) : (
-                        <img
-                          src={getChainLogoUrl(asset.chains[0]?.blockchain) || logoUrl}
-                          alt={asset.chains[0]?.blockchain}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLElement).style.display = 'none';
-                          }}
-                        />
-                      )}
-                    </div>
+                      </div>
+                    ) : !isNativeSingle && singleChain ? (
+                      <div
+                        className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark flex items-center justify-center shadow-xs overflow-hidden"
+                        title={singleChain}
+                      >
+                        {getChainLogoUrl(singleChain) ? (
+                          <img
+                            src={getChainLogoUrl(singleChain)}
+                            alt={singleChain}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
 
                   <div>

@@ -9,7 +9,7 @@ interface SparklineChartProps {
 }
 
 export function SparklineChart({
-  data = [12100, 12250, 12180, 12300, 12280, 12390, 12450.85],
+  data,
   changePercent,
   currency,
 }: SparklineChartProps) {

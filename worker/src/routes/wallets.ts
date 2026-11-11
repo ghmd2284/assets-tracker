@@ -374,6 +374,8 @@ walletRoutes.get('/portfolio', async (c) => {
         id,
         address,
         blockchain,
+        is_active,
+        last_synced_at,
         token_balances (
           token_symbol,
           token_name,
@@ -406,8 +408,8 @@ walletRoutes.get('/portfolio', async (c) => {
     const blockchain = watched.blockchain as Blockchain;
     const balances = watched.token_balances || [];
 
-    // Auto-heal empty token balance cache in background
-    if (balances.length === 0 && watched.is_active) {
+    // Auto-heal newly registered addresses that haven't had their initial sync yet
+    if (!watched.last_synced_at && watched.is_active) {
       c.executionCtx.waitUntil(
         syncWatchedAddressBalances(c.env, watched.id, watched.address, blockchain)
       );

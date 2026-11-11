@@ -340,11 +340,14 @@ export function App() {
                 )}
               </div>
 
-              {/* Sparkline Interactive Scrubber */}
-              <SparklineChart
-                changePercent={change24hPercent}
-                currency={currency}
-              />
+              {/* Sparkline Interactive Scrubber (Active in Demo Mode or when historical data exists) */}
+              {isDemoMode && (
+                <SparklineChart
+                  data={[12100, 12250, 12180, 12300, 12280, 12390, 12450.85]}
+                  changePercent={change24hPercent}
+                  currency={currency}
+                />
+              )}
             </div>
 
             {/* Quick Action: Tambah Alamat */}
