@@ -2,38 +2,45 @@ import React, { useState } from 'react';
 import { PortfolioSummary, CurrencyPref, formatFiat } from '@asset-tracker/shared';
 import { haptics } from '../lib/telegram';
 import { PieChart } from 'lucide-react';
+import { Language, translations } from '../lib/i18n';
 
 interface AllocationDonutProps {
   summary: PortfolioSummary;
   currency: CurrencyPref;
+  isDark?: boolean;
+  lang?: Language;
 }
 
-export function AllocationDonut({ summary, currency }: AllocationDonutProps) {
+export function AllocationDonut({ summary, currency, isDark = false, lang = 'id' }: AllocationDonutProps) {
+  const t = translations[lang];
   const { tonPercent, evmPercent, solanaPercent } = summary.allocation;
   const totalVal = summary.totalValueUsd;
   const [selectedChain, setSelectedChain] = useState<string | null>(null);
 
-  // Slices configuration in Japandi Mineral Palette
+  // Distinct chain color scheme with high contrast in both Light & Dark modes
   const slices = [
     {
+      id: 'evm',
       name: 'EVM L1 & L2',
       percent: evmPercent,
-      color: '#9E7B56', // Warm Amber Sandstone
-      darkColor: '#BD966E',
+      color: '#B8860B', // Warm Sandstone Gold
+      darkColor: '#F59E0B', // Amber Gold
       subtext: 'ETH, BSC, Base, Arb, Pol',
     },
     {
+      id: 'ton',
       name: 'TON Chain',
       percent: tonPercent,
-      color: '#3B728C', // Muted Mineral Cyan / Slate
-      darkColor: '#5A94B0',
+      color: '#0088CC', // Vibrant TON Blue
+      darkColor: '#38BDF8', // Cyan Sky
       subtext: 'TON, Jettons',
     },
     {
+      id: 'solana',
       name: 'Solana',
       percent: solanaPercent,
-      color: '#5F8569', // Muted Moss Sage
-      darkColor: '#7BA486',
+      color: '#10B981', // Crisp Emerald
+      darkColor: '#34D399', // Mint Jade
       subtext: 'SOL, SPL Tokens',
     },
   ];
@@ -70,10 +77,10 @@ export function AllocationDonut({ summary, currency }: AllocationDonutProps) {
           <div className="w-6 h-6 rounded-md bg-brand-accent-light dark:bg-brand-border-dark flex items-center justify-center">
             <PieChart className="w-3.5 h-3.5 text-brand-primary dark:text-brand-primary-dark" />
           </div>
-          <span>Alokasi Portofolio</span>
+          <span>{t.home.allocationTitle}</span>
         </span>
         <span className="text-brand-subdued font-mono text-[11px]">
-          {activeChainCount > 0 ? `${activeChainCount} Ekosistem` : 'Belum Ada Aset'}
+          {activeChainCount > 0 ? `${activeChainCount} ${t.home.ecosystems}` : t.home.noAssets}
         </span>
       </div>
 
@@ -85,7 +92,7 @@ export function AllocationDonut({ summary, currency }: AllocationDonutProps) {
             width={size}
             height={size}
             viewBox={`0 0 ${size} ${size}`}
-            className="transform -rotate-90"
+            className="transform -rotate-90 animate-donut-entrance"
             role="img"
             aria-label="Grafik alokasi jaringan"
           >
@@ -103,6 +110,7 @@ export function AllocationDonut({ summary, currency }: AllocationDonutProps) {
             {/* Interactive Slices with Dynamic Stroke Expansion */}
             {activeSlices.map((slice) => {
               const isSelected = selectedChain === slice.name;
+              const sliceColor = isDark ? slice.darkColor : slice.color;
 
               return (
                 <circle
@@ -111,11 +119,11 @@ export function AllocationDonut({ summary, currency }: AllocationDonutProps) {
                   cy={center}
                   r={radius}
                   fill="transparent"
-                  stroke={slice.color}
+                  stroke={sliceColor}
                   strokeWidth={isSelected ? strokeWidth + 4 : strokeWidth}
                   strokeDasharray={slice.strokeDasharray}
                   strokeDashoffset={slice.strokeDashoffset}
-                  strokeLinecap="round"
+                  strokeLinecap={activeSlices.length > 1 ? 'butt' : 'round'}
                   className="transition-all duration-300 ease-out cursor-pointer hover:opacity-90"
                   onClick={() => {
                     setSelectedChain((prev) => (prev === slice.name ? null : slice.name));
@@ -143,7 +151,7 @@ export function AllocationDonut({ summary, currency }: AllocationDonutProps) {
                   {activeChainCount > 0 ? `${activeChainCount}` : '0'}
                 </span>
                 <span className="text-[10px] font-mono text-brand-subdued uppercase block">
-                  Chains
+                  {t.home.chainsCount}
                 </span>
               </div>
             )}
@@ -155,6 +163,7 @@ export function AllocationDonut({ summary, currency }: AllocationDonutProps) {
           {slices.map((slice, idx) => {
             const isSelected = selectedChain === slice.name;
             const sliceValUsd = (totalVal * slice.percent) / 100;
+            const sliceColor = isDark ? slice.darkColor : slice.color;
 
             return (
               <div
@@ -170,8 +179,8 @@ export function AllocationDonut({ summary, currency }: AllocationDonutProps) {
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <span
-                    className="w-2.5 h-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: slice.color }}
+                    className="w-2.5 h-2.5 rounded-full shrink-0 transition-colors duration-200"
+                    style={{ backgroundColor: sliceColor }}
                   />
                   <div className="truncate">
                     <span className="font-medium text-xs block leading-tight truncate">
@@ -201,4 +210,3 @@ export function AllocationDonut({ summary, currency }: AllocationDonutProps) {
     </div>
   );
 }
-

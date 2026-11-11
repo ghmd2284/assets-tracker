@@ -12,6 +12,7 @@ export interface TelegramUserState {
   firstName?: string;
   lastName?: string;
   username?: string;
+  photoUrl?: string;
   isDark: boolean;
   isAvailable: boolean;
 }
@@ -59,6 +60,7 @@ export function initTelegram(): TelegramUserState {
       firstName: user?.first_name,
       lastName: user?.last_name,
       username: user?.username,
+      photoUrl: user?.photo_url,
       isDark,
       isAvailable: true,
     };

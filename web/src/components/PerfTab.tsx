@@ -4,15 +4,18 @@ import { haptics } from '../lib/telegram';
 import { fetchPerformance } from '../lib/api';
 import { Clock, Sparkles } from 'lucide-react';
 import { PerfSkeleton } from './Skeletons';
+import { Language, translations } from '../lib/i18n';
 
 interface PerfTabProps {
   totalValueUsd: number;
   currency: CurrencyPref;
+  lang?: Language;
 }
 
 type Timeframe = '1D' | '1W' | '1M' | '1Y' | 'ALL';
 
-export function PerfTab({ totalValueUsd, currency }: PerfTabProps) {
+export function PerfTab({ totalValueUsd, currency, lang = 'id' }: PerfTabProps) {
+  const t = translations[lang];
   const [timeframe, setTimeframe] = useState<Timeframe>('1W');
   const [perfData, setPerfData] = useState<PerformanceResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -52,7 +55,8 @@ export function PerfTab({ totalValueUsd, currency }: PerfTabProps) {
         const prev = perfData.snapshots[idx].totalValueUsd;
         const changeUsd = s.totalValueUsd - prev;
         const changePercent = prev > 0 ? (changeUsd / prev) * 100 : 0;
-        const day = new Date(s.recordedAt).toLocaleDateString('id-ID', { weekday: 'short' });
+        const locale = lang === 'id' ? 'id-ID' : 'en-US';
+        const day = new Date(s.recordedAt).toLocaleDateString(locale, { weekday: 'short' });
         return { day, changePercent, changeUsd };
       })
     : [];
@@ -88,11 +92,11 @@ export function PerfTab({ totalValueUsd, currency }: PerfTabProps) {
             <div className="w-6 h-6 rounded-md bg-brand-accent-light dark:bg-brand-border-dark flex items-center justify-center">
               <Clock className="w-3.5 h-3.5 text-brand-primary dark:text-brand-primary-dark" />
             </div>
-            PERFORMA PERIODE ({timeframe})
+            {t.perf.periodPerf} ({timeframe})
           </span>
           <span className="flex items-center gap-1.5 font-mono text-[11px]">
             <span className="w-1.5 h-1.5 rounded-full bg-chain-evm animate-pulse-glow" />
-            Snapshot 00:00 UTC
+            {t.perf.snapshotTime}
           </span>
         </div>
 
@@ -159,17 +163,17 @@ export function PerfTab({ totalValueUsd, currency }: PerfTabProps) {
             <div className="flex items-center justify-between text-[11px] font-mono text-brand-subdued pt-1">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-semantic-gain" />
-                Gain Harian
+                {t.perf.dailyGain}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-semantic-loss" />
-                Koreksi Harian
+                {t.perf.dailyLoss}
               </span>
             </div>
           </div>
         ) : (
           <div className="py-6 text-center text-xs text-brand-subdued border-t border-brand-divider dark:border-brand-divider-dark mt-2">
-            Belum ada snapshot historis untuk rentang ini. Data performa harian akan mulai diakumulasikan setiap pukul 00:00 UTC.
+            {t.perf.noSnapshots}
           </div>
         )}
       </div>
@@ -180,11 +184,11 @@ export function PerfTab({ totalValueUsd, currency }: PerfTabProps) {
         <div className="text-xs leading-relaxed">
           <div className="font-medium text-brand-primary dark:text-brand-primary-dark">
             {hasLiveSnapshots
-              ? `Histori Portofolio Aktif (${perfData?.snapshots.length} Hari Snapshot)`
-              : 'Akumulasi Snapshot Portofolio Otomatis'}
+              ? t.perf.snapshotInfoActive(perfData?.snapshots.length ?? 0)
+              : t.perf.snapshotInfoTitle}
           </div>
           <p className="text-brand-subdued dark:text-brand-subdued-dark mt-0.5">
-            Cloudflare Worker mencatat snapshot total nilai portofolio Anda setiap hari pukul 00:00 UTC ke database Supabase. Akurasi grafik akan semakin detail seiring waktu.
+            {t.perf.snapshotInfoDesc}
           </p>
         </div>
       </div>

@@ -10,11 +10,26 @@ import {
 } from '@asset-tracker/shared';
 import { haptics } from '../lib/telegram';
 import { ChevronDown, Copy, Check, Globe, Coins } from 'lucide-react';
+import { Language, translations } from '../lib/i18n';
+
+export type NetworkFilterType = 'all' | 'ton' | 'evm' | 'solana';
 
 interface ChainAccordionProps {
   assets: AggregatedAsset[];
   currency: CurrencyPref;
   hasWallets?: boolean;
+  networkFilter?: NetworkFilterType;
+  lang?: Language;
+}
+
+function matchesNetwork(blockchain: string, filter: NetworkFilterType): boolean {
+  if (filter === 'all') return true;
+  if (filter === 'ton') return blockchain.toLowerCase() === 'ton';
+  if (filter === 'solana') return blockchain.toLowerCase() === 'solana';
+  if (filter === 'evm') {
+    return ['ethereum', 'bsc', 'polygon', 'arbitrum', 'base', 'evm'].includes(blockchain.toLowerCase());
+  }
+  return true;
 }
 
 function getChainColorClass(chain: string): string {
@@ -23,7 +38,14 @@ function getChainColorClass(chain: string): string {
   return 'text-chain-evm dark:text-chain-evm-dark';
 }
 
-export function ChainAccordion({ assets, currency, hasWallets = false }: ChainAccordionProps) {
+export function ChainAccordion({
+  assets,
+  currency,
+  hasWallets = false,
+  networkFilter = 'all',
+  lang = 'id',
+}: ChainAccordionProps) {
+  const t = translations[lang];
   const [expandedSymbol, setExpandedSymbol] = useState<string | null>(null);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
@@ -39,12 +61,37 @@ export function ChainAccordion({ assets, currency, hasWallets = false }: ChainAc
     setTimeout(() => setCopiedAddress(null), 2000);
   };
 
+  // Filter assets based on active network filter
+  const displayedAssets = assets
+    .map((asset) => {
+      if (networkFilter === 'all') return asset;
+      const matchingChains = asset.chains.filter((c) => matchesNetwork(c.blockchain, networkFilter));
+      if (matchingChains.length === 0) return null;
+      const filteredTotalBal = matchingChains.reduce((sum, c) => sum + c.balance, 0);
+      const filteredTotalVal = matchingChains.reduce((sum, c) => sum + c.valueUsd, 0);
+      return {
+        ...asset,
+        totalBalance: filteredTotalBal,
+        totalValueUsd: filteredTotalVal,
+        chains: matchingChains,
+      };
+    })
+    .filter((a): a is AggregatedAsset => a !== null);
+
   if (assets.length === 0) {
     return (
       <div className="bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-tile p-5 text-center text-xs text-brand-subdued dark:text-brand-subdued-dark">
-        {hasWallets
-          ? 'Dompet terhubung. Sedang menyinkronkan saldo atau bernilai $0. Tekan tombol segarkan di kanan atas untuk memuat ulang.'
-          : 'Belum ada aset terdeteksi. Tambahkan alamat dompet untuk mulai memantau saldo.'}
+        {hasWallets ? t.home.emptyWalletsSynced : t.home.emptyAssets}
+      </div>
+    );
+  }
+
+  if (displayedAssets.length === 0) {
+    return (
+      <div className="bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-tile p-5 text-center text-xs text-brand-subdued dark:text-brand-subdued-dark">
+        {lang === 'id'
+          ? `Tidak ada aset terdeteksi pada filter ${networkFilter.toUpperCase()}.`
+          : `No assets detected for ${networkFilter.toUpperCase()} filter.`}
       </div>
     );
   }
@@ -56,15 +103,17 @@ export function ChainAccordion({ assets, currency, hasWallets = false }: ChainAc
           <div className="w-6 h-6 rounded-md bg-brand-accent-light dark:bg-brand-border-dark flex items-center justify-center">
             <Coins className="w-3.5 h-3.5 text-brand-primary dark:text-brand-primary-dark" />
           </div>
-          <span>Aset Terkumpul ({assets.length})</span>
+          <span>
+            {t.home.assetsTitle} ({displayedAssets.length})
+          </span>
         </span>
         <span className="px-2 py-0.5 rounded-full font-mono text-[10px] font-medium bg-brand-accent-light/60 dark:bg-brand-border-dark/60 text-brand-subdued dark:text-brand-subdued-dark border border-brand-border/40 dark:border-brand-border-dark/40">
-          Chain Abstraction
+          {networkFilter === 'all' ? t.home.chainAbstraction : networkFilter.toUpperCase()}
         </span>
       </div>
 
       <div className="divide-y divide-brand-divider dark:divide-brand-divider-dark">
-        {assets.map((asset, index) => {
+        {displayedAssets.map((asset, index) => {
           const isExpanded = expandedSymbol === asset.symbol;
           const chainCount = asset.chains.length;
           const logoUrl = getTokenLogoUrl(asset.symbol, asset.logoUrl);
@@ -116,7 +165,7 @@ export function ChainAccordion({ assets, currency, hasWallets = false }: ChainAc
                     {chainCount > 1 ? (
                       <div
                         className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark flex items-center justify-center shadow-xs overflow-hidden"
-                        title={`${chainCount} Jaringan (Multi-Chain)`}
+                        title={`${chainCount} ${t.home.chainsCount} (Multi-Chain)`}
                       >
                         <Globe className="w-2.5 h-2.5 text-brand-primary dark:text-brand-primary-dark" />
                       </div>
@@ -142,10 +191,12 @@ export function ChainAccordion({ assets, currency, hasWallets = false }: ChainAc
                   <div>
                     <div className="text-sm font-medium leading-tight">{asset.name || asset.symbol}</div>
                     <div className="text-xs font-mono text-brand-subdued dark:text-brand-subdued-dark flex items-center gap-1.5 mt-0.5">
-                      <span>{formatCrypto(asset.totalBalance)} {asset.symbol}</span>
+                      <span>
+                        {formatCrypto(asset.totalBalance)} {asset.symbol}
+                      </span>
                       <span className="text-brand-subdued/40">·</span>
                       <span className="text-[11px] font-medium text-brand-subdued dark:text-brand-subdued-dark">
-                        {chainCount} {chainCount > 1 ? 'Jaringan' : 'Chain'}
+                        {chainCount} {chainCount > 1 ? t.home.chainsCount : 'Chain'}
                       </span>
                     </div>
                   </div>
@@ -168,7 +219,9 @@ export function ChainAccordion({ assets, currency, hasWallets = false }: ChainAc
               {/* Sub-Network Child Rows (Smooth Grid-Row Accordion Transition) */}
               <div
                 className={`grid transition-[grid-template-rows] duration-200 ease-out ${
-                  isExpanded ? 'grid-rows-[1fr] border-t border-brand-divider dark:border-brand-divider-dark' : 'grid-rows-[0fr]'
+                  isExpanded
+                    ? 'grid-rows-[1fr] border-t border-brand-divider dark:border-brand-divider-dark'
+                    : 'grid-rows-[0fr]'
                 }`}
               >
                 <div className="overflow-hidden">
@@ -191,7 +244,11 @@ export function ChainAccordion({ assets, currency, hasWallets = false }: ChainAc
                                 }}
                               />
                             )}
-                            <span className={`uppercase font-mono text-[11px] font-semibold ${getChainColorClass(sub.blockchain)}`}>
+                            <span
+                              className={`uppercase font-mono text-[11px] font-semibold ${getChainColorClass(
+                                sub.blockchain
+                              )}`}
+                            >
                               {sub.blockchain}
                             </span>
                             <span className="text-brand-subdued">·</span>
@@ -210,12 +267,12 @@ export function ChainAccordion({ assets, currency, hasWallets = false }: ChainAc
                             onClick={() => handleCopy(sub.address)}
                             className="min-h-[36px] px-2.5 py-1.5 rounded-button border border-brand-border dark:border-brand-border-dark text-[11px] font-mono flex items-center gap-1.5 hover:bg-surface-dim active:scale-95 transition-all shadow-xs"
                             aria-label={`Salin alamat dompet ${sub.blockchain}`}
-                            title="Salin alamat dompet"
+                            title={t.common.copy}
                           >
                             {copiedAddress === sub.address ? (
                               <>
                                 <Check className="w-3.5 h-3.5 text-semantic-gain" />
-                                <span className="font-semibold text-semantic-gain">Tersalin</span>
+                                <span className="font-semibold text-semantic-gain">{t.common.copied}</span>
                               </>
                             ) : (
                               <>
@@ -237,4 +294,3 @@ export function ChainAccordion({ assets, currency, hasWallets = false }: ChainAc
     </div>
   );
 }
-

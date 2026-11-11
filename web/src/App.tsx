@@ -14,17 +14,19 @@ import {
   PortfolioSummary,
   WatchedWallet,
   MutationTransaction,
+  getChainLogoUrl,
 } from '@asset-tracker/shared';
 import { AddWalletModal } from './components/AddWalletModal';
-import { ChainAccordion } from './components/ChainAccordion';
-import { WalletList } from './components/WalletList';
+import { ChainAccordion, NetworkFilterType } from './components/ChainAccordion';
 import { AllocationDonut } from './components/AllocationDonut';
 import { SparklineChart } from './components/SparklineChart';
 import { RecentTransactions } from './components/RecentTransactions';
+import { AllTransactionsModal } from './components/AllTransactionsModal';
 import { PerfTab } from './components/PerfTab';
 import { SettingsTab } from './components/SettingsTab';
 import { AdminModal } from './components/AdminModal';
 import { HomeSkeleton } from './components/Skeletons';
+import { Language, translations } from './lib/i18n';
 import {
   ShieldCheck,
   Plus,
@@ -45,15 +47,20 @@ export function App() {
     isAvailable: false,
   });
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [lang, setLang] = useState<Language>('id');
   const [currency, setCurrency] = useState<CurrencyPref>('USD');
+  const [networkFilter, setNetworkFilter] = useState<NetworkFilterType>('all');
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [activeTab, setActiveTab] = useState<'home' | 'perf' | 'settings'>('home');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [isAllTxModalOpen, setIsAllTxModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  const t = translations[lang];
 
   const showToast = useCallback((msg: string) => {
     setToastMsg(msg);
@@ -191,34 +198,37 @@ export function App() {
     },
   ];
 
-  const loadData = useCallback(async (withSync = false) => {
-    setLoading(true);
-    if (withSync) setIsSyncing(true);
-    try {
-      if (withSync) {
-        await syncBalances();
+  const loadData = useCallback(
+    async (withSync = false) => {
+      setLoading(true);
+      if (withSync) setIsSyncing(true);
+      try {
+        if (withSync) {
+          await syncBalances();
+        }
+        const [port, wList, txList] = await Promise.all([
+          fetchPortfolio(),
+          fetchWallets(),
+          fetchTransactions(10),
+        ]);
+        if (port?.summary) {
+          setPortfolio(port);
+        }
+        setWallets(wList);
+        setTransactions(txList);
+        if (withSync) {
+          showToast(translations[lang].common.syncedSuccess);
+        }
+      } catch (err) {
+        console.info('[Data Load Info] Running with local preview state:', err);
+      } finally {
+        setLoading(false);
+        setIsSyncing(false);
+        setInitialLoading(false);
       }
-      const [port, wList, txList] = await Promise.all([
-        fetchPortfolio(),
-        fetchWallets(),
-        fetchTransactions(10),
-      ]);
-      if (port?.summary) {
-        setPortfolio(port);
-      }
-      setWallets(wList);
-      setTransactions(txList);
-      if (withSync) {
-        showToast('Portofolio berhasil disinkronkan!');
-      }
-    } catch (err) {
-      console.info('[Data Load Info] Running with local preview state:', err);
-    } finally {
-      setLoading(false);
-      setIsSyncing(false);
-      setInitialLoading(false);
-    }
-  }, [showToast]);
+    },
+    [showToast, lang]
+  );
 
   useEffect(() => {
     const userState = initTelegram();
@@ -245,7 +255,7 @@ export function App() {
   const handleToggleDemo = () => {
     setIsDemoMode((prev) => {
       const next = !prev;
-      showToast(next ? 'Mode demo whale aktif' : 'Keluar dari mode demo');
+      showToast(next ? t.home.demoWhaleOn : t.home.demoWhaleOff);
       return next;
     });
     haptics.notification('success');
@@ -272,93 +282,133 @@ export function App() {
         <div className="fixed top-3 left-1/2 -translate-x-1/2 z-40 animate-toast-enter pointer-events-none">
           <div className="px-3.5 py-1.5 rounded-full bg-surface/95 dark:bg-surface-dark/95 backdrop-blur-md border border-brand-border/80 dark:border-brand-border-dark/80 text-brand-primary dark:text-brand-primary-dark text-xs font-mono font-medium shadow-md flex items-center gap-2">
             <RefreshCw className="w-3.5 h-3.5 animate-spin text-chain-ton shrink-0" />
-            <span>Menyinkronkan saldo on-chain...</span>
+            <span>{t.common.syncing}</span>
           </div>
         </div>
       )}
 
-      {/* Demo Mode Notice Banner (Constrained to max-w-md on desktop) */}
+      {/* Demo Mode Notice Banner */}
       {isDemoMode && (
         <div className="bg-brand-accent-light dark:bg-brand-border-dark border-b border-brand-border dark:border-brand-border-dark">
           <div className="max-w-md mx-auto px-4 py-2 text-xs font-mono flex items-center justify-between">
             <span className="flex items-center gap-1.5 text-brand-primary dark:text-brand-primary-dark font-medium">
               <Sparkles className="w-3.5 h-3.5 text-chain-evm" />
-              Mode Demo Aktif: Portofolio Contoh Whale
+              {t.home.demoNotice}
             </span>
             <button
               type="button"
               onClick={handleToggleDemo}
               className="text-xs font-semibold underline hover:opacity-80 active:scale-95 transition-transform"
-              aria-label="Keluar dari mode demo"
+              aria-label={t.home.demoExit}
             >
-              Keluar
+              {t.home.demoExit}
             </button>
           </div>
         </div>
       )}
 
-      {/* Top Header (Aligned to max-w-md on desktop) */}
+      {/* Top Header */}
       <header className="border-b border-brand-divider dark:border-brand-divider-dark bg-canvas/80 dark:bg-canvas-dark/80 backdrop-blur-sm sticky top-0 z-20">
         <div className="max-w-md mx-auto px-4 pt-3.5 pb-3 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-full bg-brand-accent-light dark:bg-surface-container-high-dark flex items-center justify-center border border-brand-border dark:border-brand-border-dark text-brand-primary dark:text-brand-primary-dark font-semibold text-xs font-mono shadow-xs">
-              {tgUser.firstName ? tgUser.firstName.charAt(0).toUpperCase() : '🌿'}
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-full bg-brand-accent-light dark:bg-surface-container-high-dark flex items-center justify-center border border-brand-border dark:border-brand-border-dark text-brand-primary dark:text-brand-primary-dark font-semibold text-xs font-mono shadow-xs shrink-0 overflow-hidden">
+              {tgUser.photoUrl ? (
+                <img
+                  src={tgUser.photoUrl}
+                  alt={tgUser.firstName || 'User'}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+              ) : tgUser.firstName ? (
+                tgUser.firstName.charAt(0).toUpperCase()
+              ) : (
+                '🌿'
+              )}
             </div>
-            <div>
-              <h1 className="text-sm font-semibold leading-tight text-brand-primary dark:text-brand-primary-dark">
-                {tgUser.firstName ? `Halo, ${tgUser.firstName}` : 'Asset Tracker'}
+            <div className="min-w-0">
+              <h1 className="text-sm font-semibold leading-tight text-brand-primary dark:text-brand-primary-dark truncate">
+                {t.header.greeting(tgUser.firstName || '')}
               </h1>
               <p className="text-[11px] font-mono text-brand-subdued dark:text-brand-subdued-dark flex items-center gap-1.5 mt-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-semantic-gain animate-pulse-glow" />
-                100% Watch-Only
+                {t.header.watchOnlyStatus}
               </p>
             </div>
           </div>
 
-          {/* Currency & Theme Toggles with Accessible Sizing */}
-          <div className="flex items-center gap-1.5">
+          {/* Header Controls: Language Toggle, Currency, Theme & Sync */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Language Switcher: US <-> ID with Transition */}
+            <button
+              type="button"
+              onClick={() => {
+                const nextLang: Language = lang === 'id' ? 'en' : 'id';
+                setLang(nextLang);
+                showToast(translations[nextLang].common.langSwitched);
+                haptics.selection();
+              }}
+              className="min-h-[36px] px-2.5 text-xs font-mono font-semibold rounded-full border border-brand-border dark:border-brand-border-dark bg-surface dark:bg-surface-dark hover:bg-surface-dim active:scale-95 transition-all flex items-center justify-center shadow-xs"
+              aria-label={t.header.switchLang}
+              title={t.header.switchLang}
+            >
+              <span key={lang} className="animate-japandi-fade">
+                {lang === 'id' ? '🇮🇩 ID' : '🇺🇸 US'}
+              </span>
+            </button>
+
+            {/* Currency Toggle */}
             <button
               type="button"
               onClick={() => {
                 const nextCurrency = currency === 'USD' ? 'IDR' : 'USD';
                 setCurrency(nextCurrency);
-                showToast(`Mata uang diganti ke ${nextCurrency}`);
+                showToast(lang === 'id' ? `Mata uang diubah ke ${nextCurrency}` : `Currency changed to ${nextCurrency}`);
                 haptics.selection();
               }}
-              className="min-h-[38px] px-3 text-xs font-mono font-medium rounded-full border border-brand-border dark:border-brand-border-dark bg-surface dark:bg-surface-dark hover:bg-surface-dim active:scale-95 transition-all flex items-center justify-center shadow-xs"
-              aria-label={`Ganti mata uang acuan, saat ini ${currency}`}
-              title="Ganti mata uang"
+              className="min-h-[36px] px-2.5 text-xs font-mono font-medium rounded-full border border-brand-border dark:border-brand-border-dark bg-surface dark:bg-surface-dark hover:bg-surface-dim active:scale-95 transition-all flex items-center justify-center shadow-xs"
+              aria-label={`Currency ${currency}`}
+              title="Currency"
             >
-              {currency}
+              <span key={currency} className="animate-japandi-fade">
+                {currency}
+              </span>
             </button>
 
+            {/* Theme Toggle with Animated Icon Rotation */}
             <button
               type="button"
               onClick={toggleTheme}
-              className="min-w-[38px] min-h-[38px] rounded-full border border-brand-border dark:border-brand-border-dark bg-surface dark:bg-surface-dark text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark active:scale-95 transition-all flex items-center justify-center shadow-xs"
-              aria-label="Ganti tema gelap atau terang"
-              title="Ganti tema"
+              className="min-w-[36px] min-h-[36px] rounded-full border border-brand-border dark:border-brand-border-dark bg-surface dark:bg-surface-dark text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark active:scale-95 transition-transform duration-300 flex items-center justify-center shadow-xs"
+              aria-label={t.header.toggleTheme}
+              title={t.header.toggleTheme}
             >
-              {isDarkMode ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4" />}
+              <div key={isDarkMode ? 'dark' : 'light'} className="animate-japandi-fade">
+                {isDarkMode ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4" />}
+              </div>
             </button>
 
+            {/* Sync Refresh Button */}
             <button
               type="button"
               onClick={() => {
                 haptics.impact('light');
                 loadData(true);
               }}
-              className="min-w-[38px] min-h-[38px] rounded-full border border-brand-border dark:border-brand-border-dark bg-surface dark:bg-surface-dark text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark active:scale-95 transition-all flex items-center justify-center shadow-xs"
-              aria-label="Muat ulang dan sinkronkan portofolio"
-              title="Muat ulang dan sinkronkan data"
+              className="min-w-[36px] min-h-[36px] rounded-full border border-brand-border dark:border-brand-border-dark bg-surface dark:bg-surface-dark text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark active:scale-95 transition-all flex items-center justify-center shadow-xs"
+              aria-label={t.header.syncButton}
+              title={t.header.syncButton}
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-brand-primary dark:text-brand-primary-dark' : ''}`} />
+              <RefreshCw
+                className={`w-4 h-4 ${loading ? 'animate-spin text-brand-primary dark:text-brand-primary-dark' : ''}`}
+              />
             </button>
           </div>
         </div>
       </header>
 
-      {/* Main Content Area with Safe-Area Padding */}
+      {/* Main Content Area */}
       <main
         className="flex-1 px-4 py-4 max-w-md mx-auto w-full flex flex-col gap-4"
         style={{ paddingBottom: 'calc(6.5rem + env(safe-area-inset-bottom, 0px))' }}
@@ -369,120 +419,221 @@ export function App() {
             <HomeSkeleton />
           ) : (
             <div className="flex flex-col gap-4 animate-japandi-fade-up">
-            {/* Hero Portfolio Card (Bento Style with Touch Scrubber Sparkline) */}
-            <div className="bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-bento p-5 shadow-sm flex flex-col gap-2">
-              <div className="flex items-center justify-between text-xs text-brand-subdued dark:text-brand-subdued-dark font-medium">
-                <span>TOTAL ASSET VALUE</span>
-                <span className="flex items-center gap-1 font-mono text-[11px]">
-                  <ShieldCheck className="w-3.5 h-3.5 text-semantic-gain" />
-                  Verified Safe
-                </span>
-              </div>
-
-              <div className="text-3xl font-mono font-medium tracking-tight">
-                {formatFiat(totalValueUsd, currency)}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span
-                  className={`px-2 py-0.5 rounded-full text-xs font-mono font-medium ${
-                    change24hPercent >= 0
-                      ? 'bg-semantic-gain-bg dark:bg-semantic-gain-dark-bg text-semantic-gain dark:text-semantic-gain-dark'
-                      : 'bg-semantic-loss-bg dark:bg-semantic-loss-dark-bg text-semantic-loss dark:text-semantic-loss-dark'
-                  }`}
-                >
-                  {formatSignedPercent(change24hPercent)} Hari Ini
-                </span>
-                {currency === 'USD' && (
-                  <span className="text-xs font-mono text-brand-subdued dark:text-brand-subdued-dark">
-                    (~{formatFiat(totalValueUsd, 'IDR')})
+              {/* Hero Portfolio Card */}
+              <div className="bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-bento p-5 shadow-sm flex flex-col gap-2">
+                <div className="flex items-center justify-between text-xs text-brand-subdued dark:text-brand-subdued-dark font-medium">
+                  <span>{t.home.netWorth}</span>
+                  <span className="flex items-center gap-1 font-mono text-[11px]">
+                    <ShieldCheck className="w-3.5 h-3.5 text-semantic-gain" />
+                    {t.common.verifiedSafe}
                   </span>
+                </div>
+
+                <div className="text-3xl font-mono font-medium tracking-tight">
+                  {formatFiat(totalValueUsd, currency)}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-xs font-mono font-medium ${
+                      change24hPercent >= 0
+                        ? 'bg-semantic-gain-bg dark:bg-semantic-gain-dark-bg text-semantic-gain dark:text-semantic-gain-dark'
+                        : 'bg-semantic-loss-bg dark:bg-semantic-loss-dark-bg text-semantic-loss dark:text-semantic-loss-dark'
+                    }`}
+                  >
+                    {formatSignedPercent(change24hPercent)} {t.common.today}
+                  </span>
+                  {currency === 'USD' && (
+                    <span className="text-xs font-mono text-brand-subdued dark:text-brand-subdued-dark">
+                      (~{formatFiat(totalValueUsd, 'IDR')})
+                    </span>
+                  )}
+                </div>
+
+                {/* Sparkline Interactive Scrubber with Entrance Animation & Loading State */}
+                {isDemoMode && (
+                  <SparklineChart
+                    data={[12100, 12250, 12180, 12300, 12280, 12390, 12450.85]}
+                    changePercent={change24hPercent}
+                    currency={currency}
+                    isLoading={loading}
+                  />
                 )}
               </div>
 
-              {/* Sparkline Interactive Scrubber (Active in Demo Mode or when historical data exists) */}
-              {isDemoMode && (
-                <SparklineChart
-                  data={[12100, 12250, 12180, 12300, 12280, 12390, 12450.85]}
-                  changePercent={change24hPercent}
-                  currency={currency}
-                />
-              )}
-            </div>
-
-            {/* Quick Action: Tambah Alamat */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  haptics.impact('light');
-                  setIsAddModalOpen(true);
-                }}
-                className="flex-1 min-h-[44px] bg-brand-primary dark:bg-brand-primary-dark text-white dark:text-brand-primary rounded-button text-sm font-medium flex items-center justify-center gap-2 hover:opacity-95 active:opacity-85 transition-opacity shadow-sm"
-              >
-                <Plus className="w-4 h-4" />
-                Tambah Alamat Baru
-              </button>
-
-              {!isDemoMode && wallets.length === 0 && (
+              {/* Quick Action: Tambah Alamat */}
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={handleToggleDemo}
-                  className="min-h-[44px] px-3.5 bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-button text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-surface-dim transition-colors"
-                  title="Coba demo data"
+                  onClick={() => {
+                    haptics.impact('light');
+                    setIsAddModalOpen(true);
+                  }}
+                  className="flex-1 min-h-[44px] bg-brand-primary dark:bg-brand-primary-dark text-white dark:text-brand-primary rounded-button text-sm font-medium flex items-center justify-center gap-2 hover:opacity-95 active:opacity-85 transition-opacity shadow-sm"
                 >
-                  <Eye className="w-4 h-4 text-brand-subdued" />
-                  Demo
+                  <Plus className="w-4 h-4" />
+                  {t.home.addNewAddress}
                 </button>
-              )}
-            </div>
 
-            {/* Ecosystem Allocation Donut Chart */}
-            <AllocationDonut summary={currentSummary} currency={currency} />
-
-            {/* Supported Multi-Chain Badges */}
-            <div className="flex items-center justify-between px-1">
-              <span className="text-xs font-semibold text-brand-subdued dark:text-brand-subdued-dark">
-                Jaringan Terhubung
-              </span>
-              <div className="flex items-center gap-1.5 font-mono text-[11px]">
-                <span className="px-2.5 py-0.5 rounded-full bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark text-chain-ton dark:text-chain-ton-dark flex items-center gap-1.5 shadow-2xs">
-                  <span className="w-1.5 h-1.5 rounded-full bg-chain-ton dark:bg-chain-ton-dark" />
-                  TON
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark text-chain-evm dark:text-chain-evm-dark flex items-center gap-1.5 shadow-2xs">
-                  <span className="w-1.5 h-1.5 rounded-full bg-chain-evm dark:bg-chain-evm-dark" />
-                  EVM (5)
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark text-chain-solana dark:text-chain-solana-dark flex items-center gap-1.5 shadow-2xs">
-                  <span className="w-1.5 h-1.5 rounded-full bg-chain-solana dark:bg-chain-solana-dark" />
-                  SOL
-                </span>
+                {!isDemoMode && wallets.length === 0 && (
+                  <button
+                    onClick={handleToggleDemo}
+                    className="min-h-[44px] px-3.5 bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-button text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-surface-dim transition-colors"
+                    title={t.common.demo}
+                  >
+                    <Eye className="w-4 h-4 text-brand-subdued" />
+                    {t.common.demo}
+                  </button>
+                )}
               </div>
+
+              {/* Ecosystem Allocation Donut Chart */}
+              <AllocationDonut
+                summary={currentSummary}
+                currency={currency}
+                isDark={isDarkMode}
+                lang={lang}
+              />
+
+              {/* Jaringan Terhubung with Official Crypto Logos & Interactive Filtering */}
+              <div className="flex flex-col gap-2 px-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-brand-subdued dark:text-brand-subdued-dark">
+                    {t.home.connectedNetworks}
+                  </span>
+                  {networkFilter !== 'all' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNetworkFilter('all');
+                        haptics.selection();
+                      }}
+                      className="text-[11px] font-mono text-brand-primary dark:text-brand-primary-dark underline hover:opacity-80"
+                    >
+                      {lang === 'id' ? 'Reset Filter' : 'Reset Filter'}
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5 font-mono text-[11px] overflow-x-auto pb-0.5">
+                  {/* All Filter Pill */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNetworkFilter('all');
+                      haptics.selection();
+                    }}
+                    className={`px-3 py-1.5 rounded-full border text-xs font-mono font-medium transition-all flex items-center gap-1.5 shadow-2xs active:scale-95 shrink-0 ${
+                      networkFilter === 'all'
+                        ? 'bg-brand-primary dark:bg-brand-primary-dark text-white dark:text-brand-primary border-brand-primary'
+                        : 'bg-surface dark:bg-surface-dark border-brand-border dark:border-brand-border-dark text-brand-subdued hover:text-brand-primary'
+                    }`}
+                  >
+                    {t.home.filterAll}
+                  </button>
+
+                  {/* TON Chain Pill with Official Logo */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNetworkFilter((prev) => (prev === 'ton' ? 'all' : 'ton'));
+                      haptics.selection();
+                    }}
+                    className={`px-3 py-1.5 rounded-full border text-xs font-mono font-medium transition-all flex items-center gap-1.5 shadow-2xs active:scale-95 shrink-0 ${
+                      networkFilter === 'ton'
+                        ? 'bg-brand-primary dark:bg-brand-primary-dark text-white dark:text-brand-primary border-brand-primary'
+                        : 'bg-surface dark:bg-surface-dark border-brand-border dark:border-brand-border-dark text-brand-primary dark:text-brand-primary-dark'
+                    }`}
+                  >
+                    {getChainLogoUrl('ton') && (
+                      <img
+                        src={getChainLogoUrl('ton')}
+                        alt="TON"
+                        className="w-3.5 h-3.5 rounded-full object-cover shrink-0"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    )}
+                    <span>TON</span>
+                  </button>
+
+                  {/* EVM (5) Chain Pill with Ethereum Logo */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNetworkFilter((prev) => (prev === 'evm' ? 'all' : 'evm'));
+                      haptics.selection();
+                    }}
+                    className={`px-3 py-1.5 rounded-full border text-xs font-mono font-medium transition-all flex items-center gap-1.5 shadow-2xs active:scale-95 shrink-0 ${
+                      networkFilter === 'evm'
+                        ? 'bg-brand-primary dark:bg-brand-primary-dark text-white dark:text-brand-primary border-brand-primary'
+                        : 'bg-surface dark:bg-surface-dark border-brand-border dark:border-brand-border-dark text-brand-primary dark:text-brand-primary-dark'
+                    }`}
+                  >
+                    {getChainLogoUrl('ethereum') && (
+                      <img
+                        src={getChainLogoUrl('ethereum')}
+                        alt="EVM"
+                        className="w-3.5 h-3.5 rounded-full object-cover shrink-0"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    )}
+                    <span>EVM (5)</span>
+                  </button>
+
+                  {/* Solana Chain Pill with Solana Logo */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNetworkFilter((prev) => (prev === 'solana' ? 'all' : 'solana'));
+                      haptics.selection();
+                    }}
+                    className={`px-3 py-1.5 rounded-full border text-xs font-mono font-medium transition-all flex items-center gap-1.5 shadow-2xs active:scale-95 shrink-0 ${
+                      networkFilter === 'solana'
+                        ? 'bg-brand-primary dark:bg-brand-primary-dark text-white dark:text-brand-primary border-brand-primary'
+                        : 'bg-surface dark:bg-surface-dark border-brand-border dark:border-brand-border-dark text-brand-primary dark:text-brand-primary-dark'
+                    }`}
+                  >
+                    {getChainLogoUrl('solana') && (
+                      <img
+                        src={getChainLogoUrl('solana')}
+                        alt="SOL"
+                        className="w-3.5 h-3.5 rounded-full object-cover shrink-0"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    )}
+                    <span>SOL</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Chain Abstraction Accordion with Active Network Filter */}
+              <ChainAccordion
+                assets={currentAssets}
+                currency={currency}
+                hasWallets={wallets.length > 0}
+                networkFilter={networkFilter}
+                lang={lang}
+              />
+
+              {/* Recent Mutations Activity (with View All CTA & In/Out indicators) */}
+              <RecentTransactions
+                transactions={currentTransactions}
+                currency={currency}
+                lang={lang}
+                onOpenAll={() => setIsAllTxModalOpen(true)}
+              />
             </div>
-
-            {/* Chain Abstraction Accordion */}
-            <ChainAccordion
-              assets={currentAssets}
-              currency={currency}
-              hasWallets={wallets.length > 0}
-            />
-
-            {/* Connected Wallets List (Watch-Only) */}
-            {!isDemoMode && wallets.length > 0 && (
-              <WalletList wallets={wallets} onRefresh={loadData} />
-            )}
-
-            {/* Recent Mutations Activity */}
-            <RecentTransactions
-              transactions={currentTransactions}
-              currency={currency}
-            />
-          </div>
-        ))}
+          ))}
 
         {/* Tab Content: Perf (Performance) */}
         {activeTab === 'perf' && (
           <div className="animate-japandi-fade-up">
-            <PerfTab totalValueUsd={totalValueUsd} currency={currency} />
+            <PerfTab totalValueUsd={totalValueUsd} currency={currency} lang={lang} />
           </div>
         )}
 
@@ -493,7 +644,9 @@ export function App() {
               userProfile={{
                 id: tgUser.id || 0,
                 firstName: tgUser.firstName,
+                lastName: tgUser.lastName,
                 username: tgUser.username,
+                photoUrl: tgUser.photoUrl,
                 currencyPref: currency,
                 minAlertUsd: 1.0,
                 hideSpam: true,
@@ -506,6 +659,7 @@ export function App() {
               onRefreshWallets={loadData}
               onOpenAddWallet={() => setIsAddModalOpen(true)}
               onOpenAdmin={() => setIsAdminModalOpen(true)}
+              lang={lang}
             />
           </div>
         )}
@@ -538,8 +692,10 @@ export function App() {
             aria-label="Buka tab Beranda"
           >
             <Home className="w-4 h-4 shrink-0" />
-            <span>Home</span>
-            {activeTab === 'home' && <span className="w-1 h-1 rounded-full bg-brand-primary dark:bg-brand-primary-dark shrink-0" />}
+            <span>{t.nav.home}</span>
+            {activeTab === 'home' && (
+              <span className="w-1 h-1 rounded-full bg-brand-primary dark:bg-brand-primary-dark shrink-0" />
+            )}
           </button>
 
           <button
@@ -553,8 +709,10 @@ export function App() {
             aria-label="Buka tab Performa"
           >
             <TrendingUp className="w-4 h-4 shrink-0" />
-            <span>Perf.</span>
-            {activeTab === 'perf' && <span className="w-1 h-1 rounded-full bg-brand-primary dark:bg-brand-primary-dark shrink-0" />}
+            <span>{t.nav.perf}</span>
+            {activeTab === 'perf' && (
+              <span className="w-1 h-1 rounded-full bg-brand-primary dark:bg-brand-primary-dark shrink-0" />
+            )}
           </button>
 
           <button
@@ -568,8 +726,10 @@ export function App() {
             aria-label="Buka tab Pengaturan"
           >
             <SlidersHorizontal className="w-4 h-4 shrink-0" />
-            <span>Settings</span>
-            {activeTab === 'settings' && <span className="w-1 h-1 rounded-full bg-brand-primary dark:bg-brand-primary-dark shrink-0" />}
+            <span>{t.nav.settings}</span>
+            {activeTab === 'settings' && (
+              <span className="w-1 h-1 rounded-full bg-brand-primary dark:bg-brand-primary-dark shrink-0" />
+            )}
           </button>
         </div>
       </nav>
@@ -582,6 +742,15 @@ export function App() {
           setIsDemoMode(false);
           loadData();
         }}
+      />
+
+      {/* All Transactions Mutation Modal */}
+      <AllTransactionsModal
+        isOpen={isAllTxModalOpen}
+        onClose={() => setIsAllTxModalOpen(false)}
+        transactions={currentTransactions}
+        currency={currency}
+        lang={lang}
       />
 
       {/* Admin Control Center Modal */}

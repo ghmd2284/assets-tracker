@@ -268,29 +268,52 @@ export async function syncWatchedAddressTransactions(
       const chainPrefix = blockchain === 'bsc' ? 'bnb' : blockchain === 'arbitrum' ? 'arb' : blockchain;
       const rpcUrl = `https://${chainPrefix}-mainnet.g.alchemy.com/v2/${env.ALCHEMY_API_KEY}`;
 
-      const res = await fetch(rpcUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'alchemy_getAssetTransfers',
-          params: [
-            {
-              fromBlock: '0x0',
-              toAddress: address,
-              category: ['external', 'erc20'],
-              maxCount: '0xa',
-              order: 'desc',
-            },
-          ],
+      const [inRes, outRes] = await Promise.all([
+        fetch(rpcUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'alchemy_getAssetTransfers',
+            params: [
+              {
+                fromBlock: '0x0',
+                toAddress: address,
+                category: ['external', 'erc20'],
+                maxCount: '0xa',
+                order: 'desc',
+              },
+            ],
+          }),
         }),
-      });
+        fetch(rpcUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 2,
+            method: 'alchemy_getAssetTransfers',
+            params: [
+              {
+                fromBlock: '0x0',
+                fromAddress: address,
+                category: ['external', 'erc20'],
+                maxCount: '0xa',
+                order: 'desc',
+              },
+            ],
+          }),
+        }),
+      ]);
 
-      if (res.ok) {
-        const data = await res.json<any>();
-        const transfers = data?.result?.transfers || [];
+      const inData = inRes.ok ? await inRes.json<any>() : null;
+      const outData = outRes.ok ? await outRes.json<any>() : null;
+      const inTransfers = (inData?.result?.transfers || []).map((t: any) => ({ ...t, _dir: 'in' as const }));
+      const outTransfers = (outData?.result?.transfers || []).map((t: any) => ({ ...t, _dir: 'out' as const }));
+      const allTransfers = [...inTransfers, ...outTransfers];
 
+      if (allTransfers.length > 0) {
         const { data: subscribers } = await supabase
           .from('user_wallets')
           .select(`
@@ -304,7 +327,7 @@ export async function syncWatchedAddressTransactions(
           `)
           .eq('watched_address_id', watchedAddressId);
 
-        for (const tr of transfers) {
+        for (const tr of allTransfers) {
           if (!tr.hash) continue;
 
           const inserted = await insertAndNotify({
@@ -314,12 +337,12 @@ export async function syncWatchedAddressTransactions(
             address,
             blockchain,
             txHash: tr.hash,
-            direction: 'in',
+            direction: tr._dir,
             tokenSymbol: tr.asset || (blockchain === 'polygon' ? 'POL' : blockchain === 'bsc' ? 'BNB' : 'ETH'),
             amount: Number(tr.value) || 0,
-            fromAddress: tr.from || 'external',
-            toAddress: tr.to || address,
-            timestamp: new Date().toISOString(),
+            fromAddress: tr.from || (tr._dir === 'in' ? 'external' : address),
+            toAddress: tr.to || (tr._dir === 'in' ? address : 'external'),
+            timestamp: tr.metadata?.blockTimestamp || new Date().toISOString(),
             subscribers: subscribers || [],
             notify: options.notify ?? true,
           });

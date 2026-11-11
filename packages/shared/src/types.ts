@@ -23,6 +23,8 @@ export interface UserProfile {
   id: number; // Telegram User ID
   username?: string;
   firstName?: string;
+  lastName?: string;
+  photoUrl?: string;
   currencyPref: CurrencyPref;
   minAlertUsd: number;
   hideSpam: boolean;

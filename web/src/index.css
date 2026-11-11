@@ -238,6 +238,49 @@
   animation: shimmer 1.5s ease-in-out infinite;
 }
 
+/* Smooth Dark/Light Mode Color Transition */
+body,
+.bg-cream,
+.dark .bg-charcoal-dark,
+.bg-white,
+.dark .bg-charcoal-card,
+.border-sand,
+.dark .border-sand-dark {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+/* SVG Path Draw / Donut Entrance Animations */
+@keyframes svgPathDraw {
+  from {
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-svg-draw {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: svgPathDraw 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes donutSpinScale {
+  from {
+    transform: rotate(-90deg) scale(0.92);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(-90deg) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-donut-entrance {
+  transform-origin: center;
+  animation: donutSpinScale 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 /* Accessibility: Respect Reduced Motion Preference */
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -1,10 +1,14 @@
 import React from 'react';
 import { MutationTransaction, CurrencyPref, formatFiat, formatCrypto, truncateAddress, Blockchain } from '@asset-tracker/shared';
-import { ArrowDownLeft, ArrowUpRight, ExternalLink, Activity } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, ExternalLink, Activity, History } from 'lucide-react';
+import { translations, Language } from '../lib/i18n';
+import { haptics } from '../lib/telegram';
 
 interface RecentTransactionsProps {
   transactions: MutationTransaction[];
   currency: CurrencyPref;
+  lang?: Language;
+  onOpenAll?: () => void;
 }
 
 export function getExplorerTxUrl(chain: Blockchain, txHash: string): string {
@@ -44,19 +48,26 @@ export function formatTimeAgo(timestampStr: string): string {
   }
 }
 
-export function RecentTransactions({ transactions, currency }: RecentTransactionsProps) {
+export function RecentTransactions({
+  transactions,
+  currency,
+  lang = 'id',
+  onOpenAll,
+}: RecentTransactionsProps) {
+  const t = translations[lang].home;
+
   if (!transactions || transactions.length === 0) {
     return (
       <div className="bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-tile p-4 shadow-sm flex flex-col gap-2">
         <div className="flex items-center justify-between text-xs font-semibold border-b border-brand-divider dark:border-brand-divider-dark pb-2">
           <span className="flex items-center gap-1.5">
             <Activity className="w-3.5 h-3.5 text-brand-subdued" />
-            Mutasi Terakhir
+            {t.recentMutations}
           </span>
-          <span className="text-brand-subdued font-mono text-[11px]">Real-Time Webhook</span>
+          <span className="text-brand-subdued font-mono text-[11px]">{t.realtimeWebhook}</span>
         </div>
         <p className="text-xs text-brand-subdued dark:text-brand-subdued-dark text-center py-4">
-          Belum ada aktivitas transaksi mutasi masuk atau keluar.
+          {t.noMutations}
         </p>
       </div>
     );
@@ -69,11 +80,11 @@ export function RecentTransactions({ transactions, currency }: RecentTransaction
           <div className="w-6 h-6 rounded-md bg-brand-accent-light dark:bg-brand-border-dark flex items-center justify-center">
             <Activity className="w-3.5 h-3.5 text-brand-primary dark:text-brand-primary-dark" />
           </div>
-          <span>Mutasi Terakhir ({transactions.length})</span>
+          <span>{t.recentMutations} ({transactions.length})</span>
         </span>
         <span className="flex items-center gap-1.5 font-mono text-[11px] text-brand-subdued dark:text-brand-subdued-dark">
           <span className="w-1.5 h-1.5 rounded-full bg-semantic-gain animate-pulse-glow" />
-          Webhook
+          {t.realtimeWebhook}
         </span>
       </div>
 
@@ -106,7 +117,7 @@ export function RecentTransactions({ transactions, currency }: RecentTransaction
 
                 <div className="flex flex-col min-w-0">
                   <div className="flex items-center gap-1.5 font-medium text-xs leading-tight">
-                    <span>{isInbound ? 'Masuk' : 'Keluar'}</span>
+                    <span>{isInbound ? t.inbound : t.outbound}</span>
                     <span className="text-brand-subdued">·</span>
                     <span className="uppercase font-mono text-[10px] text-brand-subdued font-semibold tracking-wider">
                       {tx.blockchain}
@@ -152,6 +163,22 @@ export function RecentTransactions({ transactions, currency }: RecentTransaction
           );
         })}
       </div>
+
+      {transactions.length > 0 && onOpenAll && (
+        <div className="pt-1 border-t border-brand-divider dark:border-brand-divider-dark">
+          <button
+            type="button"
+            onClick={() => {
+              haptics.impact('light');
+              onOpenAll();
+            }}
+            className="w-full py-2 px-3 rounded-button border border-brand-border/70 dark:border-brand-border-dark/70 text-xs font-mono font-medium text-brand-primary dark:text-brand-primary-dark hover:bg-canvas/60 dark:hover:bg-canvas-dark/60 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 shadow-2xs"
+          >
+            <History className="w-3.5 h-3.5 text-brand-subdued" />
+            <span>{t.viewAllMutations} ({transactions.length})</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
