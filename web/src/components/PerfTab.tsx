@@ -15,10 +15,12 @@ export function PerfTab({ totalValueUsd, currency }: PerfTabProps) {
   const [timeframe, setTimeframe] = useState<Timeframe>('1W');
   const [perfData, setPerfData] = useState<PerformanceResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [selectedBarIndex, setSelectedBarIndex] = useState<number | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
+    setSelectedBarIndex(null);
 
     fetchPerformance(timeframe)
       .then((data) => {
@@ -60,16 +62,18 @@ export function PerfTab({ totalValueUsd, currency }: PerfTabProps) {
   return (
     <div className="flex flex-col gap-4 animate-in fade-in duration-150">
       {/* Timeframe Segmented Control (Japandi Pill) */}
-      <div className="p-1 bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-full flex items-center justify-between shadow-sm">
+      <div className="p-1 bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-full flex items-center justify-between shadow-xs">
         {(['1D', '1W', '1M', '1Y', 'ALL'] as Timeframe[]).map((tf) => (
           <button
             key={tf}
+            type="button"
             onClick={() => handleTimeframeChange(tf)}
-            className={`flex-1 py-1 text-xs font-mono font-medium rounded-full transition-all ${
+            className={`flex-1 min-h-[38px] py-1 text-xs font-mono font-medium rounded-full active:scale-95 transition-all flex items-center justify-center ${
               timeframe === tf
                 ? 'bg-brand-primary dark:bg-brand-primary-dark text-white dark:text-brand-primary font-semibold shadow-xs'
                 : 'text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark'
             }`}
+            aria-label={`Pilih rentang waktu ${tf}`}
           >
             {tf}
           </button>
@@ -95,29 +99,51 @@ export function PerfTab({ totalValueUsd, currency }: PerfTabProps) {
           </span>
         </div>
 
-        {/* Daily Profit / Loss Bar Chart */}
+        {/* Daily Profit / Loss Bar Chart with Interactive Tap Feedback */}
         {hasLiveSnapshots && barData.length > 0 ? (
           <div className="pt-2 flex flex-col gap-2">
-            <div className="flex items-end justify-between gap-2 h-28 pt-4 pb-1 border-b border-brand-divider dark:border-brand-divider-dark">
+            <div className="relative flex items-end justify-between gap-2 h-28 pt-6 pb-1 border-b border-brand-divider dark:border-brand-divider-dark">
               {barData.map((d, idx) => {
                 const isGain = d.changePercent >= 0;
                 const absHeight = Math.min(Math.max(Math.abs(d.changePercent) * 22, 10), 80);
+                const isSelected = selectedBarIndex === idx;
 
                 return (
-                  <div key={idx} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setSelectedBarIndex((prev) => (prev === idx ? null : idx));
+                      haptics.selection();
+                    }}
+                    className="flex-1 flex flex-col items-center gap-1 h-full justify-end group focus:outline-none relative"
+                    aria-label={`${d.day}: ${d.changePercent >= 0 ? '+' : ''}${d.changePercent.toFixed(1)}%`}
+                  >
+                    {isSelected && (
+                      <div className="absolute -top-7 px-2 py-0.5 rounded-full bg-brand-primary dark:bg-brand-primary-dark text-white dark:text-brand-primary font-mono text-[10px] font-semibold whitespace-nowrap shadow-sm animate-japandi-fade-up z-10">
+                        {d.changePercent >= 0 ? '+' : ''}{d.changePercent.toFixed(1)}%
+                      </div>
+                    )}
                     <div
-                      className={`w-full max-w-[20px] rounded-t-sm transition-all duration-300 ${
+                      className={`w-full max-w-[20px] rounded-t-sm transition-all duration-200 ${
+                        isSelected ? 'ring-2 ring-brand-primary dark:ring-brand-primary-dark scale-105' : ''
+                      } ${
                         isGain
                           ? 'bg-semantic-gain dark:bg-semantic-gain-dark'
                           : 'bg-semantic-loss dark:bg-semantic-loss-dark'
                       }`}
                       style={{ height: `${absHeight}px` }}
-                      title={`${d.day}: ${d.changePercent >= 0 ? '+' : ''}${d.changePercent.toFixed(1)}%`}
                     />
-                    <span className="text-[10px] font-mono text-brand-subdued mt-1">
+                    <span
+                      className={`text-[10px] font-mono mt-1 ${
+                        isSelected
+                          ? 'font-bold text-brand-primary dark:text-brand-primary-dark'
+                          : 'text-brand-subdued'
+                      }`}
+                    >
                       {d.day}
                     </span>
-                  </div>
+                  </button>
                 );
               })}
             </div>

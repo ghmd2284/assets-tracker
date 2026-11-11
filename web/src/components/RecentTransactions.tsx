@@ -132,7 +132,8 @@ export function RecentTransactions({ transactions, currency }: RecentTransaction
                   href={explorerUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-1 rounded text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark transition-colors"
+                  className="w-9 h-9 rounded-button border border-brand-border/70 dark:border-brand-border-dark/70 flex items-center justify-center text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark hover:bg-surface-dim active:scale-90 transition-all shadow-xs"
+                  aria-label={`Buka mutasi ${tx.blockchain} di block explorer`}
                   title="Lihat di Block Explorer"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />

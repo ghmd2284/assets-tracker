@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { parseBatchAddresses, detectAddress } from '@asset-tracker/shared';
 import { addWallets } from '../lib/api';
 import { haptics } from '../lib/telegram';
@@ -15,6 +15,17 @@ export function AddWalletModal({ isOpen, onClose, onSuccess }: AddWalletModalPro
   const [labelInput, setLabelInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Keyboard accessibility: Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -66,8 +77,16 @@ export function AddWalletModal({ isOpen, onClose, onSuccess }: AddWalletModalPro
   };
 
   return (
-    <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-md bg-surface dark:bg-surface-dark border-t sm:border border-brand-border dark:border-brand-border-dark rounded-t-bento sm:rounded-bento p-5 shadow-xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          haptics.impact('light');
+          onClose();
+        }
+      }}
+      className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-japandi-fade"
+    >
+      <div className="w-full max-w-md bg-surface dark:bg-surface-dark border-t sm:border border-brand-border dark:border-brand-border-dark rounded-t-bento sm:rounded-bento p-5 shadow-2xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto animate-japandi-slide-up sm:animate-japandi-fade-up">
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-brand-divider dark:border-brand-divider-dark pb-3">
           <div>
@@ -77,11 +96,13 @@ export function AddWalletModal({ isOpen, onClose, onSuccess }: AddWalletModalPro
             </p>
           </div>
           <button
+            type="button"
             onClick={() => {
               haptics.impact('light');
               onClose();
             }}
-            className="p-1 rounded-full text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark hover:bg-surface-dim active:scale-95 transition-all"
+            aria-label="Tutup jendela tambah alamat"
           >
             <X className="w-5 h-5" />
           </button>
@@ -168,22 +189,22 @@ export function AddWalletModal({ isOpen, onClose, onSuccess }: AddWalletModalPro
             />
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2 pt-2">
+          {/* Action Buttons with Tactile Feedback */}
+          <div className="flex items-center gap-2.5 pt-2">
             <button
               type="button"
               onClick={() => {
                 haptics.impact('light');
                 onClose();
               }}
-              className="flex-1 min-h-[44px] bg-transparent border border-brand-border dark:border-brand-border-dark rounded-button text-sm font-medium hover:bg-surface-dim transition-colors"
+              className="flex-1 min-h-[44px] bg-transparent border border-brand-border dark:border-brand-border-dark rounded-button text-sm font-medium hover:bg-surface-dim active:scale-[0.98] transition-all"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={loading || !addressInput.trim()}
-              className="flex-1 min-h-[44px] bg-brand-primary dark:bg-brand-primary-dark text-white dark:text-brand-primary rounded-button text-sm font-medium flex items-center justify-center gap-2 hover:opacity-95 active:opacity-85 disabled:opacity-50 transition-opacity"
+              className="flex-1 min-h-[44px] bg-brand-primary dark:bg-brand-primary-dark text-white dark:text-brand-primary rounded-button text-sm font-medium flex items-center justify-center gap-2 hover:opacity-95 active:scale-[0.98] disabled:opacity-50 transition-all shadow-sm"
             >
               {loading ? (
                 <>

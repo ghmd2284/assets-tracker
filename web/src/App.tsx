@@ -238,77 +238,92 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-canvas dark:bg-canvas-dark text-brand-primary dark:text-brand-primary-dark flex flex-col font-sans transition-colors duration-200">
-      {/* Demo Mode Notice Banner */}
+      {/* Demo Mode Notice Banner (Constrained to max-w-md on desktop) */}
       {isDemoMode && (
-        <div className="bg-brand-accent-light dark:bg-brand-border-dark px-4 py-2 text-xs font-mono flex items-center justify-between border-b border-brand-border dark:border-brand-border-dark">
-          <span className="flex items-center gap-1.5 text-brand-primary dark:text-brand-primary-dark font-medium">
-            <Sparkles className="w-3.5 h-3.5 text-chain-evm" />
-            Mode Demo Aktif: Portofolio Contoh Whale
-          </span>
-          <button
-            onClick={handleToggleDemo}
-            className="text-xs font-semibold underline hover:opacity-80 active:opacity-60"
-          >
-            Keluar
-          </button>
+        <div className="bg-brand-accent-light dark:bg-brand-border-dark border-b border-brand-border dark:border-brand-border-dark">
+          <div className="max-w-md mx-auto px-4 py-2 text-xs font-mono flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-brand-primary dark:text-brand-primary-dark font-medium">
+              <Sparkles className="w-3.5 h-3.5 text-chain-evm" />
+              Mode Demo Aktif: Portofolio Contoh Whale
+            </span>
+            <button
+              type="button"
+              onClick={handleToggleDemo}
+              className="text-xs font-semibold underline hover:opacity-80 active:scale-95 transition-transform"
+              aria-label="Keluar dari mode demo"
+            >
+              Keluar
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Top Header */}
-      <header className="px-4 pt-4 pb-3 flex items-center justify-between border-b border-brand-divider dark:border-brand-divider-dark">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-brand-accent-light dark:bg-surface-container-high-dark flex items-center justify-center border border-brand-border dark:border-brand-border-dark text-brand-primary dark:text-brand-primary-dark font-semibold text-xs font-mono">
-            {tgUser.firstName ? tgUser.firstName.charAt(0).toUpperCase() : '🌿'}
+      {/* Top Header (Aligned to max-w-md on desktop) */}
+      <header className="border-b border-brand-divider dark:border-brand-divider-dark bg-canvas/80 dark:bg-canvas-dark/80 backdrop-blur-sm sticky top-0 z-20">
+        <div className="max-w-md mx-auto px-4 pt-3.5 pb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-full bg-brand-accent-light dark:bg-surface-container-high-dark flex items-center justify-center border border-brand-border dark:border-brand-border-dark text-brand-primary dark:text-brand-primary-dark font-semibold text-xs font-mono shadow-xs">
+              {tgUser.firstName ? tgUser.firstName.charAt(0).toUpperCase() : '🌿'}
+            </div>
+            <div>
+              <h1 className="text-sm font-semibold leading-tight">
+                {tgUser.firstName ? `Halo, ${tgUser.firstName}` : 'Asset Tracker'}
+              </h1>
+              <p className="text-[11px] font-mono text-brand-subdued dark:text-brand-subdued-dark">
+                100% Watch-Only
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-sm font-semibold leading-tight">
-              {tgUser.firstName ? `Halo, ${tgUser.firstName}` : 'Asset Tracker'}
-            </h1>
-            <p className="text-[11px] font-mono text-brand-subdued dark:text-brand-subdued-dark">
-              100% Watch-Only
-            </p>
+
+          {/* Currency & Theme Toggles with Accessible Sizing */}
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                setCurrency((c) => (c === 'USD' ? 'IDR' : 'USD'));
+                haptics.selection();
+              }}
+              className="min-h-[38px] px-3 text-xs font-mono font-medium rounded-full border border-brand-border dark:border-brand-border-dark bg-surface dark:bg-surface-dark hover:bg-surface-dim active:scale-95 transition-all flex items-center justify-center shadow-xs"
+              aria-label={`Ganti mata uang acuan, saat ini ${currency}`}
+              title="Ganti mata uang"
+            >
+              {currency}
+            </button>
+
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="min-w-[38px] min-h-[38px] rounded-full border border-brand-border dark:border-brand-border-dark bg-surface dark:bg-surface-dark text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark active:scale-95 transition-all flex items-center justify-center shadow-xs"
+              aria-label="Ganti tema gelap atau terang"
+              title="Ganti tema"
+            >
+              {isDarkMode ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4" />}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                haptics.impact('light');
+                loadData(true);
+              }}
+              className="min-w-[38px] min-h-[38px] rounded-full border border-brand-border dark:border-brand-border-dark bg-surface dark:bg-surface-dark text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark active:scale-95 transition-all flex items-center justify-center shadow-xs"
+              aria-label="Muat ulang dan sinkronkan portofolio"
+              title="Muat ulang dan sinkronkan data"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-brand-primary dark:text-brand-primary-dark' : ''}`} />
+            </button>
           </div>
-        </div>
-
-        {/* Currency & Theme Toggles */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              setCurrency((c) => (c === 'USD' ? 'IDR' : 'USD'));
-              haptics.selection();
-            }}
-            className="px-2.5 py-1 text-xs font-mono font-medium rounded-full border border-brand-border dark:border-brand-border-dark bg-surface dark:bg-surface-dark hover:bg-surface-dim transition-colors"
-            title="Ganti mata uang"
-          >
-            {currency}
-          </button>
-
-          <button
-            onClick={toggleTheme}
-            className="p-1.5 rounded-full border border-brand-border dark:border-brand-border-dark bg-surface dark:bg-surface-dark text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark transition-colors"
-            title="Ganti tema"
-          >
-            {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </button>
-
-          <button
-            onClick={() => {
-              haptics.impact('light');
-              loadData(true);
-            }}
-            className="p-1.5 rounded-full border border-brand-border dark:border-brand-border-dark bg-surface dark:bg-surface-dark text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark transition-colors"
-            title="Muat ulang dan sinkronkan data"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 px-4 py-4 max-w-md mx-auto w-full flex flex-col gap-4 pb-24">
+      {/* Main Content Area with Safe-Area Padding */}
+      <main
+        className="flex-1 px-4 py-4 max-w-md mx-auto w-full flex flex-col gap-4"
+        style={{ paddingBottom: 'calc(6.5rem + env(safe-area-inset-bottom, 0px))' }}
+      >
         {/* Tab Content: Home */}
         {activeTab === 'home' && (
-          <div className="flex flex-col gap-4 animate-in fade-in duration-150">
+          <div className="flex flex-col gap-4 animate-japandi-fade-up">
             {/* Hero Portfolio Card (Bento Style with Touch Scrubber Sparkline) */}
             <div className="bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-bento p-5 shadow-sm flex flex-col gap-2">
               <div className="flex items-center justify-between text-xs text-brand-subdued dark:text-brand-subdued-dark font-medium">
@@ -418,66 +433,79 @@ export function App() {
 
         {/* Tab Content: Perf (Performance) */}
         {activeTab === 'perf' && (
-          <PerfTab totalValueUsd={totalValueUsd} currency={currency} />
+          <div className="animate-japandi-fade-up">
+            <PerfTab totalValueUsd={totalValueUsd} currency={currency} />
+          </div>
         )}
 
         {/* Tab Content: Settings */}
         {activeTab === 'settings' && (
-          <SettingsTab
-            userProfile={{
-              id: tgUser.id || 0,
-              firstName: tgUser.firstName,
-              username: tgUser.username,
-              currencyPref: currency,
-              minAlertUsd: 1.0,
-              hideSpam: true,
-              isBanned: false,
-              createdAt: new Date().toISOString(),
-            }}
-            wallets={wallets}
-            currency={currency}
-            onCurrencyChange={setCurrency}
-            onRefreshWallets={loadData}
-            onOpenAddWallet={() => setIsAddModalOpen(true)}
-            onOpenAdmin={() => setIsAdminModalOpen(true)}
-          />
+          <div className="animate-japandi-fade-up">
+            <SettingsTab
+              userProfile={{
+                id: tgUser.id || 0,
+                firstName: tgUser.firstName,
+                username: tgUser.username,
+                currencyPref: currency,
+                minAlertUsd: 1.0,
+                hideSpam: true,
+                isBanned: false,
+                createdAt: new Date().toISOString(),
+              }}
+              wallets={wallets}
+              currency={currency}
+              onCurrencyChange={setCurrency}
+              onRefreshWallets={loadData}
+              onOpenAddWallet={() => setIsAddModalOpen(true)}
+              onOpenAdmin={() => setIsAdminModalOpen(true)}
+            />
+          </div>
         )}
       </main>
 
-      {/* Floating Bottom Navigation Bar (Japandi Pill) */}
-      <nav className="fixed bottom-3 left-4 right-4 max-w-md mx-auto z-30">
-        <div className="h-14 px-3 bg-surface/90 dark:bg-surface-dark/90 backdrop-blur-md border border-brand-border dark:border-brand-border-dark rounded-full shadow-sm flex items-center justify-around">
+      {/* Floating Bottom Navigation Bar (Japandi Pill with Safe Area) */}
+      <nav
+        className="fixed left-4 right-4 max-w-md mx-auto z-30 pointer-events-auto"
+        style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))' }}
+      >
+        <div className="h-14 px-3 bg-surface/90 dark:bg-surface-dark/90 backdrop-blur-md border border-brand-border dark:border-brand-border-dark rounded-full shadow-md flex items-center justify-around">
           <button
+            type="button"
             onClick={() => handleTabChange('home')}
-            className={`min-h-[44px] min-w-[44px] px-3 flex items-center gap-1.5 rounded-full text-xs font-medium transition-all ${
+            className={`min-h-[44px] min-w-[44px] px-3.5 flex items-center gap-1.5 rounded-full text-xs font-medium active:scale-95 transition-all ${
               activeTab === 'home'
-                ? 'bg-brand-accent-light dark:bg-brand-border-dark text-brand-primary dark:text-brand-primary-dark font-semibold'
+                ? 'bg-brand-accent-light dark:bg-brand-border-dark text-brand-primary dark:text-brand-primary-dark font-semibold shadow-xs'
                 : 'text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark'
             }`}
+            aria-label="Buka tab Beranda"
           >
             <Home className="w-4 h-4" />
             <span>Home</span>
           </button>
 
           <button
+            type="button"
             onClick={() => handleTabChange('perf')}
-            className={`min-h-[44px] min-w-[44px] px-3 flex items-center gap-1.5 rounded-full text-xs font-medium transition-all ${
+            className={`min-h-[44px] min-w-[44px] px-3.5 flex items-center gap-1.5 rounded-full text-xs font-medium active:scale-95 transition-all ${
               activeTab === 'perf'
-                ? 'bg-brand-accent-light dark:bg-brand-border-dark text-brand-primary dark:text-brand-primary-dark font-semibold'
+                ? 'bg-brand-accent-light dark:bg-brand-border-dark text-brand-primary dark:text-brand-primary-dark font-semibold shadow-xs'
                 : 'text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark'
             }`}
+            aria-label="Buka tab Performa"
           >
             <TrendingUp className="w-4 h-4" />
             <span>Perf.</span>
           </button>
 
           <button
+            type="button"
             onClick={() => handleTabChange('settings')}
-            className={`min-h-[44px] min-w-[44px] px-3 flex items-center gap-1.5 rounded-full text-xs font-medium transition-all ${
+            className={`min-h-[44px] min-w-[44px] px-3.5 flex items-center gap-1.5 rounded-full text-xs font-medium active:scale-95 transition-all ${
               activeTab === 'settings'
-                ? 'bg-brand-accent-light dark:bg-brand-border-dark text-brand-primary dark:text-brand-primary-dark font-semibold'
+                ? 'bg-brand-accent-light dark:bg-brand-border-dark text-brand-primary dark:text-brand-primary-dark font-semibold shadow-xs'
                 : 'text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark'
             }`}
+            aria-label="Buka tab Pengaturan"
           >
             <SlidersHorizontal className="w-4 h-4" />
             <span>Settings</span>

@@ -40,9 +40,13 @@ const config: Config = {
         },
         chain: {
           ton: '#3B728C',
+          'ton-dark': '#68B3D6',
           evm: '#9E7B56',
+          'evm-dark': '#D4AA7D',
           solana: '#5F8569',
+          'solana-dark': '#85B593',
           other: '#857F78',
+          'other-dark': '#B8B2AA',
         },
       },
       fontFamily: {

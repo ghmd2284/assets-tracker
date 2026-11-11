@@ -18,9 +18,9 @@ interface ChainAccordionProps {
 }
 
 function getChainColorClass(chain: string): string {
-  if (chain === 'ton') return 'text-chain-ton';
-  if (chain === 'solana') return 'text-chain-solana';
-  return 'text-chain-evm';
+  if (chain === 'ton') return 'text-chain-ton dark:text-chain-ton-dark';
+  if (chain === 'solana') return 'text-chain-solana dark:text-chain-solana-dark';
+  return 'text-chain-evm dark:text-chain-evm-dark';
 }
 
 export function ChainAccordion({ assets, currency, hasWallets = false }: ChainAccordionProps) {
@@ -154,63 +154,70 @@ export function ChainAccordion({ assets, currency, hasWallets = false }: ChainAc
                 </div>
               </button>
 
-              {/* Sub-Network Child Rows (Expanded State) */}
-              {isExpanded && (
-                <div className="bg-canvas/60 dark:bg-canvas-dark/60 px-4 py-2 border-t border-brand-divider dark:border-brand-divider-dark flex flex-col gap-2 animate-in fade-in duration-150">
-                  {asset.chains.map((sub, idx) => (
-                    <div
-                      key={`${sub.blockchain}-${idx}`}
-                      className="py-1.5 px-3 bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-button flex items-center justify-between text-xs"
-                    >
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-1.5 font-medium">
-                          {getChainLogoUrl(sub.blockchain) && (
-                            <img
-                              src={getChainLogoUrl(sub.blockchain)}
-                              alt={sub.blockchain}
-                              className="w-3.5 h-3.5 rounded-full object-cover shrink-0"
-                              onError={(e) => {
-                                (e.target as HTMLElement).style.display = 'none';
-                              }}
-                            />
-                          )}
-                          <span className={`uppercase font-mono text-[11px] ${getChainColorClass(sub.blockchain)}`}>
-                            {sub.blockchain}
-                          </span>
-                          <span className="text-brand-subdued">·</span>
-                          <span className="text-brand-subdued truncate max-w-[120px]">
-                            {sub.label}
-                          </span>
+              {/* Sub-Network Child Rows (Smooth Grid-Row Accordion Transition) */}
+              <div
+                className={`grid transition-[grid-template-rows] duration-200 ease-out ${
+                  isExpanded ? 'grid-rows-[1fr] border-t border-brand-divider dark:border-brand-divider-dark' : 'grid-rows-[0fr]'
+                }`}
+              >
+                <div className="overflow-hidden">
+                  <div className="bg-canvas/60 dark:bg-canvas-dark/60 px-4 py-2.5 flex flex-col gap-2">
+                    {asset.chains.map((sub, idx) => (
+                      <div
+                        key={`${sub.blockchain}-${idx}`}
+                        className="py-2 px-3 bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-button flex items-center justify-between text-xs shadow-xs"
+                      >
+                        <div className="flex flex-col min-w-0 pr-2">
+                          <div className="flex items-center gap-1.5 font-medium">
+                            {getChainLogoUrl(sub.blockchain) && (
+                              <img
+                                src={getChainLogoUrl(sub.blockchain)}
+                                alt={sub.blockchain}
+                                className="w-3.5 h-3.5 rounded-full object-cover shrink-0"
+                                onError={(e) => {
+                                  (e.target as HTMLElement).style.display = 'none';
+                                }}
+                              />
+                            )}
+                            <span className={`uppercase font-mono text-[11px] font-semibold ${getChainColorClass(sub.blockchain)}`}>
+                              {sub.blockchain}
+                            </span>
+                            <span className="text-brand-subdued">·</span>
+                            <span className="text-brand-subdued truncate max-w-[120px]">
+                              {sub.label}
+                            </span>
+                          </div>
+                          <div className="font-mono text-xs text-brand-subdued mt-0.5">
+                            {formatCrypto(sub.balance)} {asset.symbol} ({formatFiat(sub.valueUsd, currency)})
+                          </div>
                         </div>
-                        <div className="font-mono text-xs text-brand-subdued mt-0.5">
-                          {formatCrypto(sub.balance)} {asset.symbol} ({formatFiat(sub.valueUsd, currency)})
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(sub.address)}
-                          className="px-2 py-1 rounded border border-brand-border dark:border-brand-border-dark text-[11px] font-mono flex items-center gap-1 hover:bg-surface-dim active:opacity-70 transition-colors"
-                          title="Salin alamat dompet"
-                        >
-                          {copiedAddress === sub.address ? (
-                            <>
-                              <Check className="w-3 h-3 text-semantic-gain" />
-                              <span>Tersalin</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3 h-3 text-brand-subdued" />
-                              <span>{truncateAddress(sub.address, 4, 3)}</span>
-                            </>
-                          )}
-                        </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(sub.address)}
+                            className="min-h-[36px] px-2.5 py-1.5 rounded-button border border-brand-border dark:border-brand-border-dark text-[11px] font-mono flex items-center gap-1.5 hover:bg-surface-dim active:scale-95 transition-all shadow-xs"
+                            aria-label={`Salin alamat dompet ${sub.blockchain}`}
+                            title="Salin alamat dompet"
+                          >
+                            {copiedAddress === sub.address ? (
+                              <>
+                                <Check className="w-3.5 h-3.5 text-semantic-gain" />
+                                <span className="font-semibold text-semantic-gain">Tersalin</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3.5 h-3.5 text-brand-subdued" />
+                                <span>{truncateAddress(sub.address, 4, 3)}</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
           );
         })}

@@ -17,7 +17,8 @@ MINI_APP_URL = "https://asset-tracker-1z9.pages.dev"
 crons = ["0 0 * * *"] # Daily portfolio snapshot at 00:00 UTC
 
 [observability.logs]
-enabled = false
+enabled = true
 invocation_logs = true
+persist = true
 
 

@@ -46,14 +46,29 @@ export function SettingsTab({
   };
 
   const handleDeleteAccount = () => {
-    if (confirm('Apakah Anda yakin ingin menghapus semua data dan daftar dompet dari Asset Tracker?')) {
+    const msg = 'Apakah Anda yakin ingin menghapus semua data dan daftar dompet dari Asset Tracker?';
+    const tg = (window as any).Telegram?.WebApp;
+
+    const onConfirmed = () => {
       haptics.notification('warning');
-      alert('Kirim perintah /delete langsung ke Bot Telegram untuk menghapus akun secara permanen.');
+      if (tg?.showAlert) {
+        tg.showAlert('Kirim perintah /delete langsung ke Bot Telegram untuk menghapus akun secara permanen.');
+      } else {
+        alert('Kirim perintah /delete langsung ke Bot Telegram untuk menghapus akun secara permanen.');
+      }
+    };
+
+    if (tg?.showConfirm) {
+      tg.showConfirm(msg, (ok: boolean) => {
+        if (ok) onConfirmed();
+      });
+    } else if (confirm(msg)) {
+      onConfirmed();
     }
   };
 
   return (
-    <div className="flex flex-col gap-4 animate-in fade-in duration-150">
+    <div className="flex flex-col gap-4">
       {/* User Identity Card */}
       <div className="bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-tile p-4 shadow-sm flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -136,6 +151,7 @@ export function SettingsTab({
                 haptics.selection();
               }}
               className="sr-only peer"
+              aria-label="Filter token sampah atau airdrop scam"
             />
             <div className="w-9 h-5 bg-surface-dim dark:bg-surface-container-high-dark peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-semantic-gain"></div>
           </label>
@@ -160,6 +176,7 @@ export function SettingsTab({
               value={minAlert}
               onChange={(e) => setMinAlert(e.target.value)}
               className="w-16 px-2 py-1 text-xs font-mono text-right bg-canvas dark:bg-canvas-dark border border-brand-border dark:border-brand-border-dark rounded-button focus:outline-none"
+              aria-label="Ambang batas minimal notifikasi mutasi dalam USD"
             />
           </div>
         </div>
@@ -167,7 +184,7 @@ export function SettingsTab({
         <button
           onClick={handleSaveSettings}
           disabled={saving}
-          className="w-full mt-2 py-2 bg-brand-primary dark:bg-brand-primary-dark text-white dark:text-brand-primary rounded-button text-xs font-semibold flex items-center justify-center gap-1.5 hover:opacity-90 active:opacity-80 disabled:opacity-50 transition-opacity"
+          className="w-full mt-2 min-h-[44px] py-2.5 bg-brand-primary dark:bg-brand-primary-dark text-white dark:text-brand-primary rounded-button text-xs font-semibold flex items-center justify-center gap-1.5 hover:opacity-90 active:scale-[0.98] disabled:opacity-50 transition-all shadow-xs"
         >
           {saving ? (
             'Menyimpan...'

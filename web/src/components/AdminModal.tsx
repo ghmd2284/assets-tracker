@@ -56,6 +56,17 @@ export function AdminModal({ isOpen, onClose }: AdminModalProps) {
     }
   }, [isOpen]);
 
+  // Keyboard accessibility: Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleToggleMaintenance = async () => {
@@ -77,34 +88,50 @@ export function AdminModal({ isOpen, onClose }: AdminModalProps) {
   const handleSendBroadcast = async () => {
     if (!broadcastText.trim()) return;
 
-    if (!confirm(`Kirim broadcast ini ke semua (${stats?.totalUsers || 0}) pengguna aktif bot?`)) {
-      return;
-    }
+    const doBroadcast = async () => {
+      setBroadcasting(true);
+      setBroadcastStatus(null);
+      haptics.impact('heavy');
 
-    setBroadcasting(true);
-    setBroadcastStatus(null);
-    haptics.impact('heavy');
+      try {
+        const res = await apiFetch<any>('/api/admin/broadcast', {
+          method: 'POST',
+          body: JSON.stringify({ message: broadcastText }),
+        });
 
-    try {
-      const res = await apiFetch<any>('/api/admin/broadcast', {
-        method: 'POST',
-        body: JSON.stringify({ message: broadcastText }),
+        setBroadcastStatus(`Sukses: Terkirim ke ${res.sentCount || 0} pengguna.`);
+        haptics.notification('success');
+        setBroadcastText('');
+      } catch (err: any) {
+        setBroadcastStatus(`Error: ${err.message || 'Gagal mengirim broadcast'}`);
+        haptics.notification('error');
+      } finally {
+        setBroadcasting(false);
+      }
+    };
+
+    const msg = `Kirim broadcast ini ke semua (${stats?.totalUsers || 0}) pengguna aktif bot?`;
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg?.showConfirm) {
+      tg.showConfirm(msg, (ok: boolean) => {
+        if (ok) doBroadcast();
       });
-
-      setBroadcastStatus(`Sukses: Terkirim ke ${res.sentCount || 0} pengguna.`);
-      haptics.notification('success');
-      setBroadcastText('');
-    } catch (err: any) {
-      setBroadcastStatus(`Error: ${err.message || 'Gagal mengirim broadcast'}`);
-      haptics.notification('error');
-    } finally {
-      setBroadcasting(false);
+    } else if (confirm(msg)) {
+      doBroadcast();
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-brand-primary/40 dark:bg-black/60 backdrop-blur-xs">
-      <div className="bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-t-bento sm:rounded-bento w-full max-w-md max-h-[90vh] flex flex-col shadow-xl overflow-hidden animate-in slide-in-from-bottom-4 duration-200">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          haptics.impact('light');
+          onClose();
+        }
+      }}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/50 backdrop-blur-sm animate-japandi-fade"
+    >
+      <div className="bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-t-bento sm:rounded-bento w-full max-w-md max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-japandi-slide-up sm:animate-japandi-fade-up">
         {/* Header */}
         <div className="p-4 border-b border-brand-divider dark:border-brand-divider-dark flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -116,20 +143,28 @@ export function AdminModal({ isOpen, onClose }: AdminModalProps) {
               <p className="text-[11px] font-mono text-brand-subdued">Sistem & Operasional Bot</p>
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <button
+              type="button"
               onClick={loadStats}
               disabled={loading}
-              className="p-1.5 rounded-full text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark transition-colors"
+              className="w-9 h-9 rounded-full flex items-center justify-center text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark hover:bg-surface-dim active:scale-90 transition-all"
+              aria-label="Perbarui statistik admin"
               title="Perbarui data"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
             <button
-              onClick={onClose}
-              className="p-1.5 rounded-full text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark transition-colors"
+              type="button"
+              onClick={() => {
+                haptics.impact('light');
+                onClose();
+              }}
+              className="w-9 h-9 rounded-full flex items-center justify-center text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark hover:bg-surface-dim active:scale-90 transition-all"
+              aria-label="Tutup panel admin"
+              title="Tutup"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </div>
