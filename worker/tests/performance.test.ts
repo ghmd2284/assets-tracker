@@ -44,3 +44,4 @@ describe('Performance Calculations & Deltas', () => {
     expect(changePercent).toBe(-15);
   });
 });
+

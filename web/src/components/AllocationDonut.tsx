@@ -168,3 +168,4 @@ export function AllocationDonut({ summary, currency }: AllocationDonutProps) {
     </div>
   );
 }
+

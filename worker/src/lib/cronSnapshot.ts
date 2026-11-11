@@ -81,3 +81,4 @@ export async function recordDailyPortfolioSnapshots(
   );
   return { usersProcessed, errors };
 }
+

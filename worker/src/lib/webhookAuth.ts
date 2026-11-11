@@ -85,3 +85,4 @@ export function verifyTonApiAuth(
   const cleanHeader = secretHeader.replace(/^Bearer\s+/i, '').trim();
   return cleanHeader === expectedSecret.trim();
 }
+

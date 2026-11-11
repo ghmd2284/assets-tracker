@@ -44,3 +44,4 @@ export async function syncWatchedAddressBalances(
     console.error(`[Sync Balances Error] ${address} on ${blockchain}:`, err);
   }
 }
+

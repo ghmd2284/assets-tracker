@@ -164,3 +164,4 @@ Dokumen ini berisi panduan lengkap langkah demi langkah untuk melakukan deploy *
 - [x] **Japandi UI & Mobile UX:** Touch targets >= 44x44px, ukuran input font 16px (mencegah zoom jump di iOS Safari), WCAG AA color contrast.
 - [x] **Daily Snapshot Cron:** Cron Trigger berjalan otomatis setiap pukul 00:00 UTC untuk merekam riwayat akumulasi nilai portofolio.
 - [x] **Admin Control Center:** Dashboard metrik sistem, broadcast rate-limited (20 msg/s), dan kill-switch maintenance mode.
+

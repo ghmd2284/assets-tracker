@@ -145,3 +145,4 @@ export function RecentTransactions({ transactions, currency }: RecentTransaction
     </div>
   );
 }
+
