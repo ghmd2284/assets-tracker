@@ -1,0 +1,47 @@
+{
+  "version": 2,
+  "skills": {
+    "supabase-postgres-best-practices": {
+      "source": "supabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/supabase-postgres-best-practices/SKILL.md",
+      "computedHash": "3eb972c2d7c818e544e35cc33ea8d7147d4d78ae08142ef40037b0fbac7a2505"
+    },
+    "telegram-bot": {
+      "source": "claude-office-skills/skills",
+      "sourceType": "github",
+      "skillPath": "telegram-bot/SKILL.md",
+      "computedHash": "7cb6a22cc8e44654ddab29ee33e577a5b8c82af51abb765f95ad6bf2902d9c3d"
+    },
+    "telegram-miniapps": {
+      "source": "ssheleg/telegram-dev",
+      "sourceType": "github",
+      "skillPath": "plugins/telegram-dev/skills/telegram-miniapps/SKILL.md",
+      "computedHash": "6cc92752519931ba836e5951bf4e9397b4fd0e52fb4bda371a111ca9dc78989f"
+    },
+    "ton-blockchain": {
+      "source": "ton-blockchain/skills",
+      "sourceType": "github",
+      "skillPath": "ton-blockchain/SKILL.md",
+      "computedHash": "60bc99a7a23f307110a831d73157a7e523477f3cd134836b964c658900c8f1c4"
+    },
+    "vercel-react-best-practices": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/react-best-practices/SKILL.md",
+      "computedHash": "7991ed4fbecdac23f47c1a40c243e00a212a9e7f3604db93959b3ae11dffe299"
+    },
+    "workers-best-practices": {
+      "source": "cloudflare/skills",
+      "sourceType": "github",
+      "skillPath": "skills/workers-best-practices/SKILL.md",
+      "computedHash": "7f941bbc549454872a4c7c261bf75a1ef7aaa69666bc85cec91e97cf40c11cc6"
+    },
+    "wrangler": {
+      "source": "cloudflare/skills",
+      "sourceType": "github",
+      "skillPath": "skills/wrangler/SKILL.md",
+      "computedHash": "182e370d8c26e6bcb896a57a63e6cab006b253b9278cc3515f7b9db2c4d07661"
+    }
+  }
+}
