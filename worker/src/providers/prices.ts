@@ -134,3 +134,16 @@ export async function resolveTokenPrices(
   return results;
 }
 
+/**
+ * Resolves a single token price and spam status using DexScreener.
+ */
+export async function fetchTokenPrice(
+  symbol: string,
+  contractAddress: string | null,
+  blockchain: Blockchain
+): Promise<{ priceUsd: number; isSpam: boolean }> {
+  const map = await resolveTokenPrices([{ symbol, contractAddress, blockchain }]);
+  const key = `${blockchain}:${contractAddress || symbol}`;
+  return map.get(key) || { priceUsd: 0, isSpam: false };
+}
+

@@ -11,6 +11,7 @@ import {
   MutationTransaction,
 } from '@asset-tracker/shared';
 import { fetchChainBalances, getUsdToIdrRate } from '../providers';
+import { syncWatchedAddressBalances } from '../lib/syncBalances';
 
 export const walletRoutes = new Hono<{
   Bindings: Env;
@@ -155,29 +156,7 @@ walletRoutes.post('/', async (c) => {
 
         // 3. Fetch initial balances and cache into token_balances (async / non-blocking)
         c.executionCtx.waitUntil(
-          (async () => {
-            try {
-              const balances = await fetchChainBalances(item.normalized, chain, c.env);
-              for (const bal of balances) {
-                await supabase.from('token_balances').upsert(
-                  {
-                    watched_address_id: watchedAddr.id,
-                    token_symbol: bal.symbol,
-                    token_name: bal.name,
-                    contract_address: bal.contractAddress,
-                    balance: bal.balance,
-                    price_usd: bal.priceUsd,
-                    value_usd: bal.valueUsd,
-                    logo_url: bal.logoUrl || null,
-                    is_spam: bal.isSpam,
-                  },
-                  { onConflict: 'watched_address_id,token_symbol,contract_address' }
-                );
-              }
-            } catch (err) {
-              console.error(`[Initial Balance Fetch Error] for ${item.normalized} on ${chain}:`, err);
-            }
-          })()
+          syncWatchedAddressBalances(c.env, watchedAddr.id, item.normalized, chain)
         );
       }
     }
