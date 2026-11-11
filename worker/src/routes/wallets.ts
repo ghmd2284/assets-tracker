@@ -105,6 +105,16 @@ walletRoutes.post('/', async (c) => {
   const body = await c.req.json<{ addresses: string[] | string; label?: string }>();
   const supabase = getSupabaseClient(c.env);
 
+  // 1. Ensure user record exists in public.users to satisfy foreign key constraints
+  await supabase.from('users').upsert(
+    {
+      id: user.id,
+      username: user.username || null,
+      first_name: user.first_name || null,
+    },
+    { onConflict: 'id' }
+  );
+
   const rawInput = Array.isArray(body.addresses) ? body.addresses.join('\n') : body.addresses;
   const { valid, invalid } = parseBatchAddresses(rawInput || '');
 
@@ -112,7 +122,7 @@ walletRoutes.post('/', async (c) => {
     return c.json({ error: 'No valid addresses detected', invalid }, 400);
   }
 
-  // Check user wallet limit based on distinct physical addresses
+  // 2. Check user wallet limit based on distinct physical addresses
   const { data: existingWallets } = await supabase
     .from('user_wallets')
     .select('watched_addresses(address)')
@@ -125,9 +135,11 @@ walletRoutes.post('/', async (c) => {
     if (a) distinctExistingAddresses.add(a);
   }
 
-  const newDistinctCount = new Set(valid.map((v) => v.normalized.toLowerCase())).size;
+  const trulyNewAddresses = valid.filter(
+    (v) => !distinctExistingAddresses.has(v.normalized.toLowerCase())
+  );
 
-  if (distinctExistingAddresses.size + newDistinctCount > 10) {
+  if (distinctExistingAddresses.size + trulyNewAddresses.length > 10) {
     return c.json(
       { error: 'Batas maksimal 10 alamat dompet unik per akun gratis tercapai.' },
       400
@@ -135,12 +147,14 @@ walletRoutes.post('/', async (c) => {
   }
 
   const createdWallets: any[] = [];
+  const syncTasks: { watchedAddressId: string; address: string; chain: Blockchain }[] = [];
 
+  // 3. Persist watched addresses and user wallet associations
   for (const item of valid) {
     const label = body.label?.trim() || `${item.ecosystem.toUpperCase()} Wallet`;
 
     for (const chain of item.targetChains) {
-      // 1. Upsert master watched_addresses
+      // 3a. Upsert master watched_addresses
       const { data: watchedAddr, error: addrErr } = await supabase
         .from('watched_addresses')
         .upsert(
@@ -159,7 +173,7 @@ walletRoutes.post('/', async (c) => {
         continue;
       }
 
-      // 2. Upsert user_wallets link
+      // 3b. Upsert user_wallets link
       const { data: userWallet, error: uwErr } = await supabase
         .from('user_wallets')
         .upsert(
@@ -174,41 +188,66 @@ walletRoutes.post('/', async (c) => {
         .select()
         .single();
 
-      if (userWallet) {
-        createdWallets.push({
-          id: userWallet.id,
-          address: item.normalized,
-          blockchain: chain,
-          label,
-        });
-
-        // 3. Fetch initial balances and cache into token_balances synchronously
-        try {
-          await syncWatchedAddressBalances(c.env, watchedAddr.id, item.normalized, chain);
-          // 4. Backfill initial transaction history asynchronously
-          c.executionCtx.waitUntil(
-            syncWatchedAddressTransactions(c.env, watchedAddr.id, item.normalized, chain, {
-              notify: false,
-            })
-          );
-        } catch (syncErr) {
-          console.error('[Initial Sync Error]:', syncErr);
-        }
+      if (uwErr || !userWallet) {
+        console.error('[Wallet Add] Failed user_wallets:', uwErr);
+        continue;
       }
+
+      createdWallets.push({
+        id: userWallet.id,
+        address: item.normalized,
+        blockchain: chain,
+        label,
+      });
+
+      syncTasks.push({
+        watchedAddressId: watchedAddr.id,
+        address: item.normalized,
+        chain,
+      });
     }
   }
 
-  // Send Telegram confirmation notification to the user
-  if (createdWallets.length > 0) {
-    try {
-      const descriptions = createdWallets
-        .map(
-          (w) =>
-            `• <b>${escapeHtml(w.label)}</b> (${w.blockchain.toUpperCase()}): <code>${truncateAddress(w.address, 6, 4)}</code>`
-        )
-        .join('\n');
+  // 4. Return error if no wallets were persisted
+  if (createdWallets.length === 0) {
+    return c.json(
+      { error: 'Gagal menambahkan alamat dompet ke database. Pastikan format alamat valid.' },
+      500
+    );
+  }
 
-      const confirmMsg = `
+  // 5. Fetch initial balances in parallel across chains
+  try {
+    await Promise.allSettled(
+      syncTasks.map((t) =>
+        syncWatchedAddressBalances(c.env, t.watchedAddressId, t.address, t.chain)
+      )
+    );
+  } catch (syncErr) {
+    console.error('[Initial Parallel Sync Error]:', syncErr);
+  }
+
+  // 6. Backfill initial transaction history asynchronously
+  c.executionCtx.waitUntil(
+    Promise.allSettled(
+      syncTasks.map((t) =>
+        syncWatchedAddressTransactions(c.env, t.watchedAddressId, t.address, t.chain, {
+          notify: false,
+        })
+      )
+    )
+  );
+
+  // 7. Send Telegram confirmation notification to the user
+  try {
+    const descriptions = createdWallets
+      .map(
+        (w) =>
+          `• <b>${escapeHtml(w.label)}</b> (${w.blockchain.toUpperCase()}): <code>${truncateAddress(w.address, 6, 4)}</code>`
+      )
+      .join('\n');
+
+    const confirmMsg = `
 🌿 <b>Dompet Berhasil Ditambahkan</b>
 ━━━━━━━━━━━━━━━━━━━━
 ${descriptions}
@@ -216,15 +255,14 @@ ${descriptions}
 🔔 <i>Notifikasi mutasi real-time otomatis aktif untuk dompet ini.</i>
 `.trim();
 
-      await sendTelegramNotification(
-        c.env.TELEGRAM_BOT_TOKEN,
-        user.id,
-        confirmMsg,
-        c.env.MINI_APP_URL
-      );
-    } catch (notifErr) {
-      console.warn('[Wallet Added Notification Error]:', notifErr);
-    }
+    await sendTelegramNotification(
+      c.env.TELEGRAM_BOT_TOKEN,
+      user.id,
+      confirmMsg,
+      c.env.MINI_APP_URL
+    );
+  } catch (notifErr) {
+    console.warn('[Wallet Added Notification Error]:', notifErr);
   }
 
   return c.json({ ok: true, created: createdWallets, invalid });

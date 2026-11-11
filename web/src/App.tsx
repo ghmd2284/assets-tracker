@@ -487,6 +487,7 @@ export function App() {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSuccess={() => {
+          setIsDemoMode(false);
           loadData();
         }}
       />

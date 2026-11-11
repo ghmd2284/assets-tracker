@@ -61,5 +61,13 @@ describe('Address Detection and Normalization', () => {
     expect(valid[1].ecosystem).toBe('ton');
     expect(valid[2].ecosystem).toBe('solana');
   });
+
+  it('splits batch addresses using space, comma, and newline delimiters', () => {
+    const raw = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045 EQBynBO23ywHy_CgarY9NK9FTz0yDsGvvqq23W61hYUWjVWU';
+    const { valid } = parseBatchAddresses(raw);
+    expect(valid).toHaveLength(2);
+    expect(valid[0].ecosystem).toBe('evm');
+    expect(valid[1].ecosystem).toBe('ton');
+  });
 });
 

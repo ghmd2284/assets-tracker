@@ -48,7 +48,10 @@ export function AddWalletModal({ isOpen, onClose, onSuccess }: AddWalletModalPro
     setErrorMsg(null);
 
     try {
-      await addWallets(addressInput, labelInput.trim() || undefined);
+      const res = await addWallets(addressInput, labelInput.trim() || undefined);
+      if (!res.ok || !res.created || res.created.length === 0) {
+        throw new Error('Gagal menambahkan alamat. Pastikan format alamat valid.');
+      }
       haptics.notification('success');
       setAddressInput('');
       setLabelInput('');

@@ -83,7 +83,7 @@ export function parseBatchAddresses(
   invalid: string[];
 } {
   const tokens = rawText
-    .split(/[\r\n,]+/)
+    .split(/[\r\n,\s]+/)
     .map((t) => t.trim())
     .filter((t) => t.length > 0);
 
