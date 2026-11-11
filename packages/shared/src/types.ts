@@ -95,3 +95,4 @@ export interface PortfolioSummary {
     solanaPercent: number;
   };
 }
+

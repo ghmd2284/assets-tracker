@@ -124,3 +124,4 @@ describe('Telegram initData WebCrypto Authentication', () => {
     expect(noHash.error).toContain('Missing hash');
   });
 });
+

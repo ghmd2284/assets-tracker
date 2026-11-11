@@ -21,3 +21,4 @@ export function getSupabaseClient(env: Env): SupabaseClient {
 
   return cachedClient;
 }
+

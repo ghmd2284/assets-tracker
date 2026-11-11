@@ -25,3 +25,4 @@ export interface TelegramAuthContext {
   user: TelegramUser;
   authDate: number;
 }
+

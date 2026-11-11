@@ -106,3 +106,4 @@ export const haptics = {
     window.Telegram?.WebApp?.HapticFeedback?.selectionChanged?.();
   },
 };
+

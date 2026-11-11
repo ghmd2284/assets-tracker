@@ -94,3 +94,4 @@ authRoutes.post('/me', async (c) => {
 
   return c.json({ profile });
 });
+

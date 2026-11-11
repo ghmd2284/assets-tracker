@@ -47,3 +47,4 @@ export async function syncUserProfile(): Promise<UserProfile | null> {
 
   return result.profile;
 }
+

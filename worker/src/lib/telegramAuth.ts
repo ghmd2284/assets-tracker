@@ -111,3 +111,4 @@ export async function validateTelegramInitData(
     return { valid: false, error: `Parsing failed: ${err.message}` };
   }
 }
+

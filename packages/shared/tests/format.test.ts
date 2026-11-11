@@ -31,3 +31,4 @@ describe('Formatters', () => {
     expect(formatSignedPercent(0)).toBe('0.00%');
   });
 });
+

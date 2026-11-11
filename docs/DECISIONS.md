@@ -22,3 +22,4 @@
 ## ADR-005: RLS Policy & Database Security
 * **Keputusan:** Menerapkan **deny-all RLS** pada Supabase PostgreSQL. Semua akses baca/tulis wajib melalui Cloudflare Worker yang memvalidasi `initData` Telegram dan menggunakan `SUPABASE_SERVICE_ROLE_KEY`.
 * **Alasan:** Mencegah kebocoran data jika `anon_key` terekspos di sisi browser/client. Worker bertindak sebagai penjaga gerbang otorisasi mutlak.
+

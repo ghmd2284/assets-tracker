@@ -62,3 +62,4 @@ describe('Address Detection and Normalization', () => {
     expect(valid[2].ecosystem).toBe('solana');
   });
 });
+

@@ -30,3 +30,4 @@ Hasil verifikasi provider untuk arsitektur serverless zero-cost Multi-Chain Asse
 | **Alchemy** | Ethereum, BSC, Base, Arbitrum, Polygon | `/webhooks/alchemy` | `X-Alchemy-Signature` (HMAC-SHA256) |
 | **Helius** | Solana | `/webhooks/helius` | `Authorization: Bearer <secret>` |
 | **TonAPI** | TON | `/webhooks/ton` | `X-Tonapi-Secret` (Header token) |
+

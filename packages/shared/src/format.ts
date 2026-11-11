@@ -50,3 +50,4 @@ export function formatSignedPercent(percent: number): string {
   const sign = percent > 0 ? '+' : '';
   return `${sign}${percent.toFixed(2)}%`;
 }
+

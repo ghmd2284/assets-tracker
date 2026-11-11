@@ -118,3 +118,4 @@ alter table public.token_balances enable row level security;
 alter table public.transactions enable row level security;
 alter table public.portfolio_snapshots enable row level security;
 alter table public.app_config enable row level security;
+
