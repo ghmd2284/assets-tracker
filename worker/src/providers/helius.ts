@@ -1,4 +1,4 @@
-import { Blockchain } from '@asset-tracker/shared';
+import { Blockchain, getTokenLogoUrl } from '@asset-tracker/shared';
 import { RawTokenBalance, BalanceProvider } from './types';
 import { resolveTokenPrices } from './prices';
 
@@ -59,6 +59,7 @@ export class HeliusProvider implements BalanceProvider {
             decimals: 9,
             priceUsd: 0,
             valueUsd: 0,
+            logoUrl: getTokenLogoUrl('SOL'),
             isSpam: false,
           });
         }

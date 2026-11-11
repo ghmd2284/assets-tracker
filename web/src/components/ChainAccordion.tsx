@@ -1,7 +1,15 @@
 import React, { useState } from 'react';
-import { AggregatedAsset, CurrencyPref, formatFiat, formatCrypto, truncateAddress } from '@asset-tracker/shared';
+import {
+  AggregatedAsset,
+  CurrencyPref,
+  formatFiat,
+  formatCrypto,
+  truncateAddress,
+  getTokenLogoUrl,
+  getChainLogoUrl,
+} from '@asset-tracker/shared';
 import { haptics } from '../lib/telegram';
-import { ChevronDown, Copy, Check, ExternalLink } from 'lucide-react';
+import { ChevronDown, Copy, Check, Globe } from 'lucide-react';
 
 interface ChainAccordionProps {
   assets: AggregatedAsset[];
@@ -52,6 +60,7 @@ export function ChainAccordion({ assets, currency, hasWallets = false }: ChainAc
         {assets.map((asset) => {
           const isExpanded = expandedSymbol === asset.symbol;
           const chainCount = asset.chains.length;
+          const logoUrl = getTokenLogoUrl(asset.symbol, asset.logoUrl);
 
           return (
             <div key={asset.symbol} className="flex flex-col">
@@ -62,29 +71,50 @@ export function ChainAccordion({ assets, currency, hasWallets = false }: ChainAc
                 className="px-4 py-3 w-full flex items-center justify-between text-left hover:bg-canvas/50 dark:hover:bg-canvas-dark/50 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  {/* Ceramic Emblem Avatar */}
-                  <div className="w-9 h-9 rounded-full bg-brand-accent-light dark:bg-brand-border-dark border border-brand-border dark:border-brand-border-dark flex items-center justify-center font-mono font-semibold text-xs text-brand-primary dark:text-brand-primary-dark shrink-0 overflow-hidden">
-                    {asset.logoUrl ? (
-                      <img
-                        src={asset.logoUrl}
-                        alt={asset.symbol}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          // Monogram fallback
-                          (e.target as HTMLElement).style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      asset.symbol.slice(0, 2)
-                    )}
+                  {/* Crypto Emblem Avatar with Small World / Network Badge */}
+                  <div className="relative w-9 h-9 shrink-0">
+                    <div className="w-9 h-9 rounded-full bg-surface-dim dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark flex items-center justify-center font-mono font-semibold text-xs text-brand-primary dark:text-brand-primary-dark overflow-hidden shadow-xs">
+                      {logoUrl ? (
+                        <img
+                          src={logoUrl}
+                          alt={asset.symbol}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        asset.symbol.slice(0, 2)
+                      )}
+                    </div>
+
+                    {/* Small World / Network Badge in the Bottom-Right Corner */}
+                    <div
+                      className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark flex items-center justify-center shadow-xs overflow-hidden"
+                      title={chainCount > 1 ? `${chainCount} Jaringan (Multi-Chain)` : asset.chains[0]?.blockchain}
+                    >
+                      {chainCount > 1 ? (
+                        <Globe className="w-2.5 h-2.5 text-brand-primary dark:text-brand-primary-dark" />
+                      ) : (
+                        <img
+                          src={getChainLogoUrl(asset.chains[0]?.blockchain) || logoUrl}
+                          alt={asset.chains[0]?.blockchain}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      )}
+                    </div>
                   </div>
 
                   <div>
                     <div className="text-sm font-medium leading-tight">{asset.name || asset.symbol}</div>
                     <div className="text-xs font-mono text-brand-subdued dark:text-brand-subdued-dark flex items-center gap-1.5 mt-0.5">
                       <span>{formatCrypto(asset.totalBalance)} {asset.symbol}</span>
-                      <span className="px-1.5 py-0.2 rounded-full bg-surface-dim dark:bg-surface-container-high-dark text-[10px]">
-                        🌐 {chainCount} {chainCount > 1 ? 'Jaringan' : 'Chain'}
+                      <span className="text-brand-subdued/40">·</span>
+                      <span className="text-[11px] font-medium text-brand-subdued dark:text-brand-subdued-dark">
+                        {chainCount} {chainCount > 1 ? 'Jaringan' : 'Chain'}
                       </span>
                     </div>
                   </div>
@@ -114,6 +144,16 @@ export function ChainAccordion({ assets, currency, hasWallets = false }: ChainAc
                     >
                       <div className="flex flex-col">
                         <div className="flex items-center gap-1.5 font-medium">
+                          {getChainLogoUrl(sub.blockchain) && (
+                            <img
+                              src={getChainLogoUrl(sub.blockchain)}
+                              alt={sub.blockchain}
+                              className="w-3.5 h-3.5 rounded-full object-cover shrink-0"
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = 'none';
+                              }}
+                            />
+                          )}
                           <span className={`uppercase font-mono text-[11px] ${getChainColorClass(sub.blockchain)}`}>
                             {sub.blockchain}
                           </span>

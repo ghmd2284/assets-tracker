@@ -1,4 +1,4 @@
-import { Blockchain } from '@asset-tracker/shared';
+import { Blockchain, getTokenLogoUrl } from '@asset-tracker/shared';
 import { RawTokenBalance, BalanceProvider } from './types';
 import { resolveTokenPrices } from './prices';
 
@@ -100,6 +100,7 @@ export class AlchemyProvider implements BalanceProvider {
             decimals: nativeInfo.decimals,
             priceUsd: 0,
             valueUsd: 0,
+            logoUrl: getTokenLogoUrl(nativeInfo.symbol),
             isSpam: false,
           });
         }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { WatchedWallet, truncateAddress } from '@asset-tracker/shared';
+import { WatchedWallet, truncateAddress, getChainLogoUrl } from '@asset-tracker/shared';
 import { deleteWallet } from '../lib/api';
 import { haptics } from '../lib/telegram';
 import { Trash2, Copy, Check, Wallet } from 'lucide-react';
@@ -57,7 +57,14 @@ export function WalletList({ wallets, onRefresh }: WalletListProps) {
             <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-medium truncate">{w.label}</span>
-                <span className="px-1.5 py-0.2 rounded-full uppercase font-mono text-[9px] bg-brand-accent-light dark:bg-brand-border-dark text-brand-primary dark:text-brand-primary-dark">
+                <span className="px-1.5 py-0.2 rounded-full uppercase font-mono text-[9px] bg-brand-accent-light dark:bg-brand-border-dark text-brand-primary dark:text-brand-primary-dark flex items-center gap-1">
+                  {getChainLogoUrl(w.blockchain) && (
+                    <img
+                      src={getChainLogoUrl(w.blockchain)}
+                      alt={w.blockchain}
+                      className="w-3 h-3 rounded-full object-cover shrink-0"
+                    />
+                  )}
                   {w.blockchain}
                 </span>
                 {w.isDemo && (

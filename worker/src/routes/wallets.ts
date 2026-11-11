@@ -13,6 +13,7 @@ import {
   PortfolioSnapshot,
   PerformanceResponse,
   truncateAddress,
+  getTokenLogoUrl,
 } from '@asset-tracker/shared';
 import { fetchChainBalances, getUsdToIdrRate } from '../providers';
 import { syncWatchedAddressBalances } from '../lib/syncBalances';
@@ -433,7 +434,7 @@ walletRoutes.get('/portfolio', async (c) => {
         assetMap.set(symbol, {
           symbol,
           name: bal.token_name,
-          logoUrl: bal.logo_url || undefined,
+          logoUrl: bal.logo_url || getTokenLogoUrl(symbol) || undefined,
           totalBalance: 0,
           totalValueUsd: 0,
           chains: [],
