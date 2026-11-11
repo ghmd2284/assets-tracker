@@ -95,3 +95,54 @@ authRoutes.post('/me', async (c) => {
   return c.json({ profile });
 });
 
+// PATCH /api/preferences - Update user preferences
+authRoutes.patch('/preferences', async (c) => {
+  const { user } = c.get('telegramAuth');
+  const body = await c.req.json<{
+    currencyPref?: 'USD' | 'IDR';
+    hideSpam?: boolean;
+    minAlertUsd?: number;
+  }>();
+
+  const supabase = getSupabaseClient(c.env);
+
+  const updates: Record<string, any> = {};
+  if (body.currencyPref && (body.currencyPref === 'USD' || body.currencyPref === 'IDR')) {
+    updates.currency_pref = body.currencyPref;
+  }
+  if (typeof body.hideSpam === 'boolean') {
+    updates.hide_spam = body.hideSpam;
+  }
+  if (typeof body.minAlertUsd === 'number' && body.minAlertUsd >= 0) {
+    updates.min_alert_usd = body.minAlertUsd;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return c.json({ error: 'No valid preferences to update' }, 400);
+  }
+
+  const { data, error } = await supabase
+    .from('users')
+    .update(updates)
+    .eq('id', user.id)
+    .select()
+    .single();
+
+  if (error || !data) {
+    return c.json({ error: 'Failed to update preferences' }, 500);
+  }
+
+  const profile: UserProfile = {
+    id: data.id,
+    username: data.username,
+    firstName: data.first_name,
+    currencyPref: data.currency_pref,
+    minAlertUsd: Number(data.min_alert_usd),
+    hideSpam: data.hide_spam,
+    isBanned: data.is_banned,
+    createdAt: data.created_at,
+  };
+
+  return c.json({ ok: true, profile });
+});
+

@@ -39,6 +39,10 @@ describe('Webhook Auth Verification', () => {
 
     const isInvalid = await verifyAlchemySignature(rawBody, 'deadbeef1234', signingKey);
     expect(isInvalid).toBe(false);
+
+    // Strict default-deny: reject when signingKey is missing
+    const isDeniedWithoutKey = await verifyAlchemySignature(rawBody, validSignature, undefined);
+    expect(isDeniedWithoutKey).toBe(false);
   });
 
   it('verifies Helius Bearer auth header', () => {
@@ -47,6 +51,7 @@ describe('Webhook Auth Verification', () => {
     expect(verifyHeliusAuth('helius_secret_abc', secret)).toBe(true);
     expect(verifyHeliusAuth('Bearer wrong_secret', secret)).toBe(false);
     expect(verifyHeliusAuth(null, secret)).toBe(false);
+    expect(verifyHeliusAuth('Bearer helius_secret_abc', undefined)).toBe(false);
   });
 
   it('verifies TonAPI secret header', () => {
@@ -54,6 +59,7 @@ describe('Webhook Auth Verification', () => {
     expect(verifyTonApiAuth('ton_secret_xyz', secret)).toBe(true);
     expect(verifyTonApiAuth('Bearer ton_secret_xyz', secret)).toBe(true);
     expect(verifyTonApiAuth('wrong', secret)).toBe(false);
+    expect(verifyTonApiAuth('ton_secret_xyz', undefined)).toBe(false);
   });
 });
 
@@ -232,5 +238,24 @@ describe('Telegram Bot Notification Formatting', () => {
 
     expect(outMsg).toContain('🔴 <b>Aset Keluar Terdeteksi</b>');
     expect(outMsg).toContain('−10 SOL');
+  });
+
+  it('escapes XML/HTML characters in wallet labels and token symbols to prevent parsing errors', () => {
+    const msg = formatMutationAlertMessage({
+      blockchain: 'ethereum',
+      direction: 'in',
+      amount: 100,
+      tokenSymbol: '<SCAM>&TOKEN',
+      amountUsd: 100,
+      walletLabel: 'Savings & <Investment> Vault',
+      address: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+      txHash: '0x3a82f91b72c91823d0a928ef1c293812739281a9',
+      currencyPref: 'USD',
+    });
+
+    expect(msg).toContain('&lt;SCAM&gt;&amp;TOKEN');
+    expect(msg).toContain('Savings &amp; &lt;Investment&gt; Vault');
+    expect(msg).not.toContain('<Investment>');
+    expect(msg).not.toContain('<SCAM>');
   });
 });

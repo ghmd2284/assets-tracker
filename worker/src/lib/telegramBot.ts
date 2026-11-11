@@ -13,6 +13,16 @@ export interface MutationAlertPayload {
 }
 
 /**
+ * Safely escapes characters for Telegram HTML parse mode (&, <, >).
+ */
+export function escapeHtml(str: string): string {
+  return (str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+/**
  * Returns the public explorer transaction URL for any supported blockchain.
  */
 export function getExplorerTxUrl(chain: Blockchain, txHash: string): string {
@@ -38,6 +48,7 @@ export function getExplorerTxUrl(chain: Blockchain, txHash: string): string {
 
 /**
  * Formats a clean, readable Japandi Telegram HTML push notification.
+ * Sanitizes user-provided and dynamic text to prevent parse errors.
  */
 export function formatMutationAlertMessage(alert: MutationAlertPayload): string {
   const isInbound = alert.direction === 'in';
@@ -47,6 +58,9 @@ export function formatMutationAlertMessage(alert: MutationAlertPayload): string 
   const explorerUrl = getExplorerTxUrl(alert.blockchain, alert.txHash);
   const shortHash = truncateAddress(alert.txHash, 6, 4);
   const shortAddr = truncateAddress(alert.address, 6, 4);
+
+  const safeLabel = escapeHtml(alert.walletLabel);
+  const safeSymbol = escapeHtml(alert.tokenSymbol);
 
   const fiatFormatted = alert.amountUsd && alert.amountUsd > 0
     ? ` (~${formatFiat(alert.amountUsd, alert.currencyPref || 'USD')})`
@@ -60,8 +74,8 @@ export function formatMutationAlertMessage(alert: MutationAlertPayload): string 
   return `
 ${icon} <b>${title}</b>
 ━━━━━━━━━━━━━━━━━━━━
-💰 <b>Nominal:</b> <code>${sign}${formatCrypto(alert.amount)} ${alert.tokenSymbol}</code>${fiatFormatted}
-🏷️ <b>Dompet:</b> ${alert.walletLabel}
+💰 <b>Nominal:</b> <code>${sign}${formatCrypto(alert.amount)} ${safeSymbol}</code>${fiatFormatted}
+🏷️ <b>Dompet:</b> ${safeLabel}
 🌐 <b>Jaringan:</b> ${networkName}
 📍 <b>Alamat:</b> <code>${shortAddr}</code>
 🔗 <b>Tx Hash:</b> <a href="${explorerUrl}">${shortHash}</a>
@@ -120,4 +134,3 @@ export async function sendTelegramNotification(
     return false;
   }
 }
-

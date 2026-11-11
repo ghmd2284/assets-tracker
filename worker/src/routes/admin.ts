@@ -35,8 +35,8 @@ adminRoutes.use('*', async (c, next) => {
 
   const userIdStr = context.user.id.toString();
 
-  // If ADMIN_TELEGRAM_IDS is set, enforce strict match
-  if (adminIds.length > 0 && !adminIds.includes(userIdStr)) {
+  // Strict Default-Deny: require ADMIN_TELEGRAM_IDS to be configured and user ID to be included
+  if (adminIds.length === 0 || !adminIds.includes(userIdStr)) {
     return c.json({ error: 'Forbidden: Admin access required' }, 403);
   }
 

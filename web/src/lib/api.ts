@@ -146,3 +146,26 @@ export async function fetchPerformance(range = '1W'): Promise<PerformanceRespons
     return null;
   }
 }
+
+/**
+ * Updates user preferences in the database.
+ */
+export async function updatePreferences(prefs: {
+  currencyPref?: 'USD' | 'IDR';
+  hideSpam?: boolean;
+  minAlertUsd?: number;
+}): Promise<boolean> {
+  const initData = getTelegramInitData();
+  if (!initData) return true;
+
+  try {
+    await apiFetch('/api/preferences', {
+      method: 'PATCH',
+      body: JSON.stringify(prefs),
+    });
+    return true;
+  } catch (err) {
+    console.error('[Update Preferences Error]:', err);
+    return false;
+  }
+}

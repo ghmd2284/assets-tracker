@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { WatchedWallet, CurrencyPref, UserProfile } from '@asset-tracker/shared';
 import { WalletList } from './WalletList';
 import { haptics } from '../lib/telegram';
+import { updatePreferences } from '../lib/api';
 import { Shield, Bell, DollarSign, Trash2, User, Check, ExternalLink, ShieldAlert } from 'lucide-react';
 
 interface SettingsTabProps {
@@ -23,12 +24,23 @@ export function SettingsTab({
   onOpenAddWallet,
   onOpenAdmin,
 }: SettingsTabProps) {
-  const [hideSpam, setHideSpam] = useState(true);
-  const [minAlert, setMinAlert] = useState('1.00');
+  const [hideSpam, setHideSpam] = useState(userProfile?.hideSpam ?? true);
+  const [minAlert, setMinAlert] = useState(userProfile?.minAlertUsd ? userProfile.minAlertUsd.toString() : '1.00');
   const [savedNotice, setSavedNotice] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const handleSaveSettings = () => {
+  const handleSaveSettings = async () => {
+    setSaving(true);
     haptics.notification('success');
+
+    const parsedAlert = parseFloat(minAlert);
+    await updatePreferences({
+      currencyPref: currency,
+      hideSpam,
+      minAlertUsd: isNaN(parsedAlert) ? 1.0 : parsedAlert,
+    });
+
+    setSaving(false);
     setSavedNotice(true);
     setTimeout(() => setSavedNotice(false), 2000);
   };
@@ -154,9 +166,12 @@ export function SettingsTab({
 
         <button
           onClick={handleSaveSettings}
-          className="w-full mt-2 py-2 bg-brand-primary dark:bg-brand-primary-dark text-white dark:text-brand-primary rounded-button text-xs font-semibold flex items-center justify-center gap-1.5 hover:opacity-90 active:opacity-80 transition-opacity"
+          disabled={saving}
+          className="w-full mt-2 py-2 bg-brand-primary dark:bg-brand-primary-dark text-white dark:text-brand-primary rounded-button text-xs font-semibold flex items-center justify-center gap-1.5 hover:opacity-90 active:opacity-80 disabled:opacity-50 transition-opacity"
         >
-          {savedNotice ? (
+          {saving ? (
+            'Menyimpan...'
+          ) : savedNotice ? (
             <>
               <Check className="w-3.5 h-3.5 text-semantic-gain" />
               Tersimpan!

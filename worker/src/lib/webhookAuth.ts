@@ -1,6 +1,7 @@
 /**
  * Webhook signature and authentication verification utilities for
  * Alchemy, Helius, and TonAPI using WebCrypto.
+ * Implements strict Default-Deny security.
  */
 
 /**
@@ -11,11 +12,7 @@ export async function verifyAlchemySignature(
   signatureHeader: string | null | undefined,
   signingKey: string | undefined
 ): Promise<boolean> {
-  // If no signing key configured in environment, allow in development/testing
-  if (!signingKey) {
-    return true;
-  }
-  if (!signatureHeader) {
+  if (!signingKey || !signatureHeader) {
     return false;
   }
 
@@ -57,10 +54,7 @@ export function verifyHeliusAuth(
   authHeader: string | null | undefined,
   expectedSecret: string | undefined
 ): boolean {
-  if (!expectedSecret) {
-    return true;
-  }
-  if (!authHeader) {
+  if (!expectedSecret || !authHeader) {
     return false;
   }
 
@@ -75,14 +69,10 @@ export function verifyTonApiAuth(
   secretHeader: string | null | undefined,
   expectedSecret: string | undefined
 ): boolean {
-  if (!expectedSecret) {
-    return true;
-  }
-  if (!secretHeader) {
+  if (!expectedSecret || !secretHeader) {
     return false;
   }
 
   const cleanHeader = secretHeader.replace(/^Bearer\s+/i, '').trim();
   return cleanHeader === expectedSecret.trim();
 }
-

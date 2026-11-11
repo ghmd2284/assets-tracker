@@ -5,6 +5,7 @@ import { getSupabaseClient } from '../lib/supabase';
 import {
   parseBatchAddresses,
   Blockchain,
+  EVM_CHAINS,
   AggregatedAsset,
   PortfolioSummary,
   WatchedWallet,
@@ -41,7 +42,7 @@ walletRoutes.use('*', async (c, next) => {
   await next();
 });
 
-// GET /api/wallets - List all user's tracked wallets
+// GET /api/wallets - List all user's tracked wallets (grouped by distinct address)
 walletRoutes.get('/', async (c) => {
   const { user } = c.get('telegramAuth');
   const supabase = getSupabaseClient(c.env);
@@ -69,15 +70,29 @@ walletRoutes.get('/', async (c) => {
     return c.json({ error: error.message }, 500);
   }
 
-  const wallets: WatchedWallet[] = (data || []).map((row: any) => ({
-    id: row.id,
-    address: row.watched_addresses?.address,
-    blockchain: row.watched_addresses?.blockchain,
-    label: row.wallet_label,
-    isDemo: row.is_demo,
-    createdAt: row.created_at,
-  }));
+  // Deduplicate distinct physical addresses so 1 EVM wallet displays as 1 row
+  const groupedWallets = new Map<string, WatchedWallet>();
+  for (const row of (data || []) as any[]) {
+    const addr = row.watched_addresses?.address;
+    if (!addr) continue;
 
+    const key = addr.toLowerCase();
+    const chain = row.watched_addresses?.blockchain as Blockchain;
+    const isEvm = EVM_CHAINS.includes(chain);
+
+    if (!groupedWallets.has(key)) {
+      groupedWallets.set(key, {
+        id: row.id,
+        address: addr,
+        blockchain: isEvm ? 'ethereum' : chain,
+        label: row.wallet_label,
+        isDemo: row.is_demo,
+        createdAt: row.created_at,
+      });
+    }
+  }
+
+  const wallets = Array.from(groupedWallets.values());
   return c.json({ wallets });
 });
 
@@ -94,16 +109,24 @@ walletRoutes.post('/', async (c) => {
     return c.json({ error: 'No valid addresses detected', invalid }, 400);
   }
 
-  // Check user wallet limit (maximum 10 distinct addresses per user)
-  const { count } = await supabase
+  // Check user wallet limit based on distinct physical addresses
+  const { data: existingWallets } = await supabase
     .from('user_wallets')
-    .select('id', { count: 'exact', head: true })
+    .select('watched_addresses(address)')
     .eq('user_id', user.id)
     .eq('is_demo', false);
 
-  if ((count || 0) + valid.length > 10) {
+  const distinctExistingAddresses = new Set<string>();
+  for (const w of (existingWallets || []) as any[]) {
+    const a = w.watched_addresses?.address?.toLowerCase();
+    if (a) distinctExistingAddresses.add(a);
+  }
+
+  const newDistinctCount = new Set(valid.map((v) => v.normalized.toLowerCase())).size;
+
+  if (distinctExistingAddresses.size + newDistinctCount > 10) {
     return c.json(
-      { error: 'Batas maksimal 10 alamat dompet per akun gratis tercapai.' },
+      { error: 'Batas maksimal 10 alamat dompet unik per akun gratis tercapai.' },
       400
     );
   }
@@ -199,32 +222,58 @@ walletRoutes.delete('/:id', async (c) => {
   const walletId = c.req.param('id');
   const supabase = getSupabaseClient(c.env);
 
-  // Find the watched_address_id first
+  // Find the target watched address info
   const { data: uw } = await supabase
     .from('user_wallets')
-    .select('watched_address_id')
+    .select('watched_address_id, watched_addresses(address, blockchain)')
     .eq('id', walletId)
     .eq('user_id', user.id)
     .single();
 
-  if (!uw) {
+  if (!uw || !(uw as any).watched_addresses) {
     return c.json({ error: 'Wallet not found' }, 404);
   }
 
-  // Delete from user_wallets
-  await supabase.from('user_wallets').delete().eq('id', walletId);
+  const targetAddress = (uw as any).watched_addresses.address;
+  const targetChain = (uw as any).watched_addresses.blockchain as Blockchain;
+  const isEvm = EVM_CHAINS.includes(targetChain);
 
-  // Reference counting check: if no other user is watching this address, mark inactive
-  const { count } = await supabase
+  let userWalletIdsToDelete = [walletId];
+  let watchedAddressIdsToCheck = [uw.watched_address_id];
+
+  if (isEvm) {
+    // For EVM, find all user_wallets for this user sharing the same 0x address
+    const { data: allEvmRows } = await supabase
+      .from('user_wallets')
+      .select('id, watched_address_id, watched_addresses!inner(address)')
+      .eq('user_id', user.id)
+      .eq('watched_addresses.address', targetAddress);
+
+    if (allEvmRows && allEvmRows.length > 0) {
+      userWalletIdsToDelete = allEvmRows.map((r: any) => r.id);
+      watchedAddressIdsToCheck = allEvmRows.map((r: any) => r.watched_address_id);
+    }
+  }
+
+  // Delete all matching user_wallets entries for this user
+  await supabase
     .from('user_wallets')
-    .select('id', { count: 'exact', head: true })
-    .eq('watched_address_id', uw.watched_address_id);
+    .delete()
+    .in('id', userWalletIdsToDelete);
 
-  if (count === 0) {
-    await supabase
-      .from('watched_addresses')
-      .update({ is_active: false })
-      .eq('id', uw.watched_address_id);
+  // Reference counting check: if no other user is watching these addresses, mark inactive
+  for (const waId of watchedAddressIdsToCheck) {
+    const { count } = await supabase
+      .from('user_wallets')
+      .select('id', { count: 'exact', head: true })
+      .eq('watched_address_id', waId);
+
+    if (count === 0) {
+      await supabase
+        .from('watched_addresses')
+        .update({ is_active: false })
+        .eq('id', waId);
+    }
   }
 
   return c.json({ ok: true });
