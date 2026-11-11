@@ -1,0 +1,17 @@
+name = "asset-tracker-worker"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ENVIRONMENT = "development"
+MINI_APP_URL = "https://asset-tracker.pages.dev"
+
+# Setup KV namespace for price caching in production via:
+# wrangler kv:namespace create "PRICE_CACHE"
+# [[kv_namespaces]]
+# binding = "PRICE_CACHE"
+# id = "<kv_id>"
+
+[triggers]
+crons = ["0 0 * * *"] # Daily portfolio snapshot at 00:00 UTC

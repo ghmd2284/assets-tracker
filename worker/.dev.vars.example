@@ -1,0 +1,16 @@
+# Telegram Bot Configuration
+TELEGRAM_BOT_TOKEN="your-telegram-bot-token-from-botfather"
+TELEGRAM_BOT_SECRET_TOKEN="optional-random-secret-for-webhook-verification"
+MINI_APP_URL="https://asset-tracker.pages.dev"
+
+# Supabase Credentials
+SUPABASE_URL="https://your-project.supabase.co"
+SUPABASE_SERVICE_ROLE_KEY="your-supabase-service-role-key"
+
+# Multi-Chain Webhook Secrets (Phase 4)
+ALCHEMY_WEBHOOK_SIGNING_KEY="your-alchemy-signing-key"
+HELIUS_WEBHOOK_SECRET="your-helius-secret-header"
+TONAPI_SECRET="your-tonapi-secret-token"
+
+# Admin IDs for /admin route
+ADMIN_TELEGRAM_IDS="123456789,987654321"

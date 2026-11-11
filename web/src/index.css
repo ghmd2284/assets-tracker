@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  [data-theme="dark"],
+  .dark {
+    color-scheme: dark;
+  }
+
+  html,
+  body {
+    min-height: 100dvh;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Prevent iOS automatic zoom on inputs */
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  /* Force monospaced figures to align in strict columns */
+  .font-mono {
+    font-feature-settings: 'tnum' on, 'zero' on;
+  }
+}
