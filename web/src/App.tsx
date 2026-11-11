@@ -10,6 +10,7 @@ import {
   formatFiat,
   formatSignedPercent,
   CurrencyPref,
+  UserProfile,
   AggregatedAsset,
   PortfolioSummary,
   WatchedWallet,
@@ -49,6 +50,7 @@ export function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [lang, setLang] = useState<Language>('id');
   const [currency, setCurrency] = useState<CurrencyPref>('USD');
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [networkFilter, setNetworkFilter] = useState<NetworkFilterType>('all');
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [activeTab, setActiveTab] = useState<'home' | 'perf' | 'settings'>('home');
@@ -209,7 +211,7 @@ export function App() {
         const [port, wList, txList] = await Promise.all([
           fetchPortfolio(),
           fetchWallets(),
-          fetchTransactions(10),
+          fetchTransactions(50),
         ]);
         if (port?.summary) {
           setPortfolio(port);
@@ -236,7 +238,17 @@ export function App() {
     setIsDarkMode(userState.isDark);
 
     if (userState.isAvailable) {
-      syncUserProfile().then(() => loadData()).catch(console.error);
+      syncUserProfile()
+        .then((profile) => {
+          if (profile) {
+            setUserProfile(profile);
+            if (profile.currencyPref) {
+              setCurrency(profile.currencyPref);
+            }
+          }
+          return loadData();
+        })
+        .catch(console.error);
     }
   }, [loadData]);
 
@@ -641,21 +653,36 @@ export function App() {
         {activeTab === 'settings' && (
           <div className="animate-japandi-fade-up">
             <SettingsTab
-              userProfile={{
-                id: tgUser.id || 0,
-                firstName: tgUser.firstName,
-                lastName: tgUser.lastName,
-                username: tgUser.username,
-                photoUrl: tgUser.photoUrl,
-                currencyPref: currency,
-                minAlertUsd: 1.0,
-                hideSpam: true,
-                isBanned: false,
-                createdAt: new Date().toISOString(),
-              }}
+              userProfile={
+                userProfile
+                  ? {
+                      ...userProfile,
+                      photoUrl: tgUser.photoUrl,
+                      firstName: tgUser.firstName || userProfile.firstName,
+                      lastName: tgUser.lastName || userProfile.lastName,
+                      username: tgUser.username || userProfile.username,
+                    }
+                  : {
+                      id: tgUser.id || 0,
+                      firstName: tgUser.firstName,
+                      lastName: tgUser.lastName,
+                      username: tgUser.username,
+                      photoUrl: tgUser.photoUrl,
+                      currencyPref: currency,
+                      minAlertUsd: 1.0,
+                      hideSpam: true,
+                      isBanned: false,
+                      createdAt: new Date().toISOString(),
+                    }
+              }
               wallets={wallets}
               currency={currency}
-              onCurrencyChange={setCurrency}
+              onCurrencyChange={(c) => {
+                setCurrency(c);
+                if (userProfile) {
+                  setUserProfile({ ...userProfile, currencyPref: c });
+                }
+              }}
               onRefreshWallets={loadData}
               onOpenAddWallet={() => setIsAddModalOpen(true)}
               onOpenAdmin={() => setIsAdminModalOpen(true)}
@@ -737,6 +764,7 @@ export function App() {
       {/* Smart Textarea Add Wallet Modal */}
       <AddWalletModal
         isOpen={isAddModalOpen}
+        lang={lang}
         onClose={() => setIsAddModalOpen(false)}
         onSuccess={() => {
           setIsDemoMode(false);

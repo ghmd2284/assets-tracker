@@ -32,19 +32,20 @@ export function getExplorerTxUrl(chain: Blockchain, txHash: string): string {
   }
 }
 
-export function formatTimeAgo(timestampStr: string): string {
+export function formatTimeAgo(timestampStr: string, lang: Language = 'id'): string {
+  const t = translations[lang].home;
   try {
     const diffMs = Date.now() - new Date(timestampStr).getTime();
     const diffMins = Math.floor(diffMs / (60 * 1000));
     const diffHours = Math.floor(diffMs / (3600 * 1000));
     const diffDays = Math.floor(diffMs / (86400 * 1000));
 
-    if (diffMins < 1) return 'Baru saja';
-    if (diffMins < 60) return `${diffMins}m lalu`;
-    if (diffHours < 24) return `${diffHours}j lalu`;
-    return `${diffDays}h lalu`;
+    if (diffMins < 1) return t.justNow;
+    if (diffMins < 60) return `${diffMins}${t.minsAgo}`;
+    if (diffHours < 24) return `${diffHours}${t.hoursAgo}`;
+    return `${diffDays}${t.daysAgo}`;
   } catch {
-    return 'Baru saja';
+    return t.justNow;
   }
 }
 
@@ -124,7 +125,7 @@ export function RecentTransactions({
                     </span>
                   </div>
                   <div className="text-[11px] font-mono text-brand-subdued dark:text-brand-subdued-dark truncate mt-0.5">
-                    {formatTimeAgo(tx.timestamp)} · {truncateAddress(isInbound ? tx.fromAddress : tx.toAddress, 5, 4)}
+                    {formatTimeAgo(tx.timestamp, lang)} · {truncateAddress(isInbound ? tx.fromAddress : tx.toAddress, 5, 4)}
                   </div>
                 </div>
               </div>

@@ -571,13 +571,17 @@ walletRoutes.get('/transactions', async (c) => {
 
   const watchedIds = uwList.map((uw) => uw.watched_address_id);
 
-  // 2. Fetch latest 10 transactions
+  // 2. Parse limit query (clamped safely between 1 and 100, default 10)
+  const limitQuery = parseInt(c.req.query('limit') || '10', 10);
+  const limit = Math.min(Math.max(isNaN(limitQuery) ? 10 : limitQuery, 1), 100);
+
+  // Fetch latest transactions
   const { data: txList, error } = await supabase
     .from('transactions')
     .select('*')
     .in('watched_address_id', watchedIds)
     .order('timestamp', { ascending: false })
-    .limit(10);
+    .limit(limit);
 
   if (error) {
     return c.json({ error: error.message }, 500);

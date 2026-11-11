@@ -141,7 +141,7 @@ export function DeleteConfirmModal({
             {loading ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Menghapus...</span>
+                <span>{t.deletingBtn}</span>
               </>
             ) : (
               <>

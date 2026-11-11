@@ -197,7 +197,7 @@ export function AllTransactionsModal({
                     : 'text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark'
                 }`}
               >
-                {c === 'all' ? 'All Chain' : c}
+                {c === 'all' ? t.allChains : c}
               </button>
             ))}
           </div>
@@ -233,14 +233,14 @@ export function AllTransactionsModal({
 
                     <div className="flex flex-col min-w-0">
                       <div className="flex items-center gap-1.5 font-medium text-xs leading-tight">
-                        <span>{isInbound ? 'Masuk' : 'Keluar'}</span>
+                        <span>{isInbound ? translations[lang].home.inbound : translations[lang].home.outbound}</span>
                         <span className="text-brand-subdued">·</span>
                         <span className="uppercase font-mono text-[10px] text-brand-subdued font-semibold tracking-wider">
                           {tx.blockchain}
                         </span>
                       </div>
                       <div className="text-[11px] font-mono text-brand-subdued dark:text-brand-subdued-dark truncate mt-0.5">
-                        {formatTimeAgo(tx.timestamp)} · {truncateAddress(isInbound ? tx.fromAddress : tx.toAddress, 6, 4)}
+                        {formatTimeAgo(tx.timestamp, lang)} · {truncateAddress(isInbound ? tx.fromAddress : tx.toAddress, 6, 4)}
                       </div>
                     </div>
                   </div>
@@ -269,8 +269,8 @@ export function AllTransactionsModal({
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-9 h-9 rounded-button border border-brand-border/70 dark:border-brand-border-dark/70 flex items-center justify-center text-brand-subdued hover:text-brand-primary dark:hover:text-brand-primary-dark hover:bg-surface-dim active:scale-90 transition-all shadow-2xs"
-                      aria-label="Explorer"
-                      title="Lihat di Block Explorer"
+                      aria-label={translations[lang].common.explorer}
+                      title={translations[lang].common.explorer}
                     >
                       <ExternalLink className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                     </a>
