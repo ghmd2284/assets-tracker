@@ -7,11 +7,15 @@ MINI_APP_URL="https://asset-tracker.pages.dev"
 SUPABASE_URL="https://your-project.supabase.co"
 SUPABASE_SERVICE_ROLE_KEY="your-supabase-service-role-key"
 
-# Multi-Chain Webhook Secrets (Phase 4)
+# Multi-Chain Provider API Keys (Phase 2 Balances)
+ALCHEMY_API_KEY="your-alchemy-api-key"
+HELIUS_API_KEY="your-helius-api-key"
+TONAPI_KEY="your-tonapi-key"
+
+# Multi-Chain Webhook Secrets (Phase 4 Real-time Mutations)
 ALCHEMY_WEBHOOK_SIGNING_KEY="your-alchemy-signing-key"
 HELIUS_WEBHOOK_SECRET="your-helius-secret-header"
 TONAPI_SECRET="your-tonapi-secret-token"
 
 # Admin IDs for /admin route
 ADMIN_TELEGRAM_IDS="123456789,987654321"
-

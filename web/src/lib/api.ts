@@ -1,4 +1,4 @@
-import { UserProfile } from '@asset-tracker/shared';
+import { UserProfile, WatchedWallet, AggregatedAsset, PortfolioSummary } from '@asset-tracker/shared';
 import { getTelegramInitData } from './telegram';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -33,7 +33,7 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
 }
 
 /**
- * Syncs the current Telegram user profile with the Cloudflare Worker database.
+ * Syncs the current Telegram user profile with the database.
  */
 export async function syncUserProfile(): Promise<UserProfile | null> {
   const initData = getTelegramInitData();
@@ -48,3 +48,61 @@ export async function syncUserProfile(): Promise<UserProfile | null> {
   return result.profile;
 }
 
+/**
+ * Fetches all tracked wallets for the authenticated user.
+ */
+export async function fetchWallets(): Promise<WatchedWallet[]> {
+  const initData = getTelegramInitData();
+  if (!initData) return [];
+
+  const result = await apiFetch<{ wallets: WatchedWallet[] }>('/api/wallets');
+  return result.wallets || [];
+}
+
+/**
+ * Adds one or more addresses to track.
+ */
+export async function addWallets(
+  addresses: string,
+  label?: string
+): Promise<{ ok: boolean; created: any[]; invalid: string[] }> {
+  return apiFetch('/api/wallets', {
+    method: 'POST',
+    body: JSON.stringify({ addresses, label }),
+  });
+}
+
+/**
+ * Deletes a tracked wallet.
+ */
+export async function deleteWallet(walletId: string): Promise<boolean> {
+  const result = await apiFetch<{ ok: boolean }>(`/api/wallets/${walletId}`, {
+    method: 'DELETE',
+  });
+  return result.ok;
+}
+
+/**
+ * Fetches the aggregated multi-chain portfolio.
+ */
+export async function fetchPortfolio(): Promise<{
+  summary: PortfolioSummary;
+  assets: AggregatedAsset[];
+}> {
+  const initData = getTelegramInitData();
+  if (!initData) {
+    // Return empty portfolio in standalone browser preview if no backend connection
+    return {
+      summary: {
+        totalValueUsd: 0,
+        totalValueIdr: 0,
+        change24hUsd: 0,
+        change24hPercent: 0,
+        allocation: { tonPercent: 0, evmPercent: 0, solanaPercent: 0 },
+      },
+      assets: [],
+    };
+  }
+
+  return apiFetch('/api/wallets/portfolio');
+}

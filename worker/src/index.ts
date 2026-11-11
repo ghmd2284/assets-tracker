@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { Env } from './types';
 import { authRoutes } from './routes/auth';
+import { walletRoutes } from './routes/wallets';
 import { botRoutes } from './routes/bot';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -27,6 +28,7 @@ app.get('/health', (c) => {
 
 // Mount Routes
 app.route('/api', authRoutes);
+app.route('/api/wallets', walletRoutes);
 app.route('/bot', botRoutes);
 
 // Export for Cloudflare Worker & Cron Trigger
@@ -37,4 +39,3 @@ export default {
     // Phase 5: Snapshot portfolio balances
   },
 };
-

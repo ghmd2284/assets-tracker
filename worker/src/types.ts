@@ -5,6 +5,11 @@ export interface Env {
   TELEGRAM_BOT_SECRET_TOKEN?: string;
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE_KEY: string;
+  // Multi-Chain Provider API Keys
+  ALCHEMY_API_KEY?: string;
+  HELIUS_API_KEY?: string;
+  TONAPI_KEY?: string;
+  // Multi-Chain Webhook Secrets
   ALCHEMY_WEBHOOK_SIGNING_KEY?: string;
   HELIUS_WEBHOOK_SECRET?: string;
   TONAPI_SECRET?: string;
@@ -25,4 +30,3 @@ export interface TelegramAuthContext {
   user: TelegramUser;
   authDate: number;
 }
-
