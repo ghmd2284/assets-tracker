@@ -23,6 +23,7 @@ import { SparklineChart } from './components/SparklineChart';
 import { RecentTransactions } from './components/RecentTransactions';
 import { PerfTab } from './components/PerfTab';
 import { SettingsTab } from './components/SettingsTab';
+import { AdminModal } from './components/AdminModal';
 import {
   ShieldCheck,
   Plus,
@@ -46,6 +47,7 @@ export function App() {
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [activeTab, setActiveTab] = useState<'home' | 'perf' | 'settings'>('home');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Live Data State
@@ -422,6 +424,7 @@ export function App() {
             onCurrencyChange={setCurrency}
             onRefreshWallets={loadData}
             onOpenAddWallet={() => setIsAddModalOpen(true)}
+            onOpenAdmin={() => setIsAdminModalOpen(true)}
           />
         )}
       </main>
@@ -474,6 +477,12 @@ export function App() {
         onSuccess={() => {
           loadData();
         }}
+      />
+
+      {/* Admin Control Center Modal */}
+      <AdminModal
+        isOpen={isAdminModalOpen}
+        onClose={() => setIsAdminModalOpen(false)}
       />
     </div>
   );

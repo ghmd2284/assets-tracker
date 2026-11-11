@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { WatchedWallet, CurrencyPref, UserProfile } from '@asset-tracker/shared';
 import { WalletList } from './WalletList';
 import { haptics } from '../lib/telegram';
-import { Shield, Bell, DollarSign, Trash2, User, Check, ExternalLink } from 'lucide-react';
+import { Shield, Bell, DollarSign, Trash2, User, Check, ExternalLink, ShieldAlert } from 'lucide-react';
 
 interface SettingsTabProps {
   userProfile?: UserProfile | null;
@@ -11,6 +11,7 @@ interface SettingsTabProps {
   onCurrencyChange: (c: CurrencyPref) => void;
   onRefreshWallets: () => void;
   onOpenAddWallet: () => void;
+  onOpenAdmin?: () => void;
 }
 
 export function SettingsTab({
@@ -20,6 +21,7 @@ export function SettingsTab({
   onCurrencyChange,
   onRefreshWallets,
   onOpenAddWallet,
+  onOpenAdmin,
 }: SettingsTabProps) {
   const [hideSpam, setHideSpam] = useState(true);
   const [minAlert, setMinAlert] = useState('1.00');
@@ -164,6 +166,31 @@ export function SettingsTab({
           )}
         </button>
       </div>
+
+      {/* Admin Quick Action */}
+      {onOpenAdmin && (
+        <div className="bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-tile p-4 shadow-sm flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-chain-evm/10 flex items-center justify-center text-chain-evm">
+              <ShieldAlert className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="text-xs font-semibold">Admin Control Center</div>
+              <div className="text-[11px] text-brand-subdued">Statistik sistem, broadcast, & pemeliharaan</div>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              haptics.impact('light');
+              onOpenAdmin();
+            }}
+            className="px-3 py-1.5 bg-brand-primary dark:bg-brand-primary-dark text-white dark:text-brand-primary rounded-button text-xs font-semibold hover:opacity-90 transition-opacity"
+          >
+            Buka Panel
+          </button>
+        </div>
+      )}
 
       {/* Danger Zone / Privacy */}
       <div className="bg-surface dark:bg-surface-dark border border-semantic-loss/20 rounded-tile p-4 shadow-sm flex items-center justify-between">

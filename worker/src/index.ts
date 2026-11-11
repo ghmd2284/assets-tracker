@@ -5,6 +5,7 @@ import { authRoutes } from './routes/auth';
 import { walletRoutes } from './routes/wallets';
 import { botRoutes } from './routes/bot';
 import { webhookRoutes } from './routes/webhooks';
+import { adminRoutes } from './routes/admin';
 import { recordDailyPortfolioSnapshots } from './lib/cronSnapshot';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -31,6 +32,7 @@ app.get('/health', (c) => {
 // Mount Routes
 app.route('/api', authRoutes);
 app.route('/api/wallets', walletRoutes);
+app.route('/api/admin', adminRoutes);
 app.route('/bot', botRoutes);
 app.route('/webhooks', webhookRoutes);
 

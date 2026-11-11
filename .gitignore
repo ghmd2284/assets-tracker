@@ -40,4 +40,4 @@ Thumbs.db
 *.swo
 
 # Agent
-.agents/skills
+.agents
