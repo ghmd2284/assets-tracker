@@ -38,7 +38,7 @@ let isInitializing = false;
 // Default GigaPub Project ID:
 // 1. LocalStorage override (configured by user/admin in-app)
 // 2. Environment variable VITE_GIGAPUB_PROJECT_ID
-// 3. Verified working GigaPub Sandbox Project ID: "8036"
+// 3. User's registered GigaPub Project ID: "9093"
 export function getGigaPubProjectId(): string {
   if (typeof window !== 'undefined') {
     const saved = localStorage.getItem('gigapub_project_id');
@@ -46,7 +46,7 @@ export function getGigaPubProjectId(): string {
   }
   const envId = (import.meta.env.VITE_GIGAPUB_PROJECT_ID as string)?.trim();
   if (envId && envId !== 'asset-tracker') return envId;
-  return '8036';
+  return '9093';
 }
 
 export function setGigaPubProjectId(newId: string): void {
