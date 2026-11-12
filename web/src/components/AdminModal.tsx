@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../lib/api';
 import { haptics } from '../lib/telegram';
-import { ShieldAlert, Users, Radio, Wrench, X, Send, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { getGigaPubProjectId, setGigaPubProjectId } from '../lib/gigapub';
+import { ShieldAlert, Users, Radio, Wrench, X, Send, CheckCircle2, AlertTriangle, RefreshCw, Gift, Check } from 'lucide-react';
 
 interface AdminStats {
   totalUsers: number;
@@ -26,6 +27,15 @@ export function AdminModal({ isOpen, onClose }: AdminModalProps) {
   const [broadcastText, setBroadcastText] = useState('');
   const [broadcastStatus, setBroadcastStatus] = useState<string | null>(null);
   const [broadcasting, setBroadcasting] = useState(false);
+  const [adminGigaId, setAdminGigaId] = useState(getGigaPubProjectId());
+  const [adminGigaSaved, setAdminGigaSaved] = useState(false);
+
+  const handleSaveGigaId = () => {
+    setGigaPubProjectId(adminGigaId);
+    haptics.notification('success');
+    setAdminGigaSaved(true);
+    setTimeout(() => setAdminGigaSaved(false), 2000);
+  };
 
   const loadStats = async () => {
     setLoading(true);
@@ -264,6 +274,45 @@ export function AdminModal({ isOpen, onClose }: AdminModalProps) {
               <Send className="w-3.5 h-3.5" />
               {broadcasting ? 'Mengirim Broadcast...' : 'Kirim Pengumuman'}
             </button>
+          </div>
+
+          {/* GigaPub Monetization Project ID Control */}
+          <div className="p-3.5 bg-canvas dark:bg-canvas-dark border border-brand-border dark:border-brand-border-dark rounded-tile flex flex-col gap-2.5">
+            <div className="font-semibold text-xs flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Gift className="w-3.5 h-3.5 text-amber-500" />
+                GigaPub Ad & OfferWall Project ID
+              </div>
+              <span className="font-mono text-[10px] text-brand-subdued">
+                Aktif: {getGigaPubProjectId()}
+              </span>
+            </div>
+            <p className="text-[11px] text-brand-subdued leading-relaxed">
+              Gunakan ID numerik akun GigaPub Anda dari partner.giga.pub / @gigapub_bot (contoh bawaan: 8036).
+            </p>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={adminGigaId}
+                onChange={(e) => setAdminGigaId(e.target.value)}
+                placeholder="Contoh: 8036"
+                className="flex-1 px-3 py-1.5 text-xs font-mono bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-button focus:outline-none"
+              />
+              <button
+                onClick={handleSaveGigaId}
+                className="py-1.5 px-3 bg-brand-primary dark:bg-brand-primary-dark text-white dark:text-brand-primary rounded-button font-semibold text-xs flex items-center gap-1 shadow-xs"
+              >
+                {adminGigaSaved ? (
+                  <>
+                    <Check className="w-3 h-3 text-semantic-gain" />
+                    Tersimpan
+                  </>
+                ) : (
+                  'Simpan ID'
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>

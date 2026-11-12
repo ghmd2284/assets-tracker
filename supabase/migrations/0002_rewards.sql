@@ -27,3 +27,4 @@ create index if not exists idx_user_rewards_created_at on public.user_rewards(cr
 
 -- 4. Enable RLS with service-role full access
 alter table public.user_rewards enable row level security;
+

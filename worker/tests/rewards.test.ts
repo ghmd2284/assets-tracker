@@ -92,3 +92,4 @@ describe('GigaPub Server-Side Hash Verification', () => {
     expect(result.error).toBe('Invalid hash signature');
   });
 });
+

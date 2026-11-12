@@ -6,7 +6,8 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 ENVIRONMENT = "production"
 MINI_APP_URL = "https://asset-tracker-1z9.pages.dev"
-GIGAPUB_PROJECT_ID = ""
+GIGAPUB_PROJECT_ID = "8036"
+
 
 
 # Setup KV namespace for price caching in production via:

@@ -34,31 +34,63 @@ declare global {
 // Global cached SDK reference
 let sdkInstance: OfferWallSDK | null = null;
 let isInitializing = false;
-let scriptsInjected = false;
 
-// Default GigaPub Project ID (from env or default public project)
-export const GIGAPUB_PROJECT_ID =
-  (import.meta.env.VITE_GIGAPUB_PROJECT_ID as string) || 'asset-tracker';
+// Default GigaPub Project ID:
+// 1. LocalStorage override (configured by user/admin in-app)
+// 2. Environment variable VITE_GIGAPUB_PROJECT_ID
+// 3. Verified working GigaPub Sandbox Project ID: "8036"
+export function getGigaPubProjectId(): string {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('gigapub_project_id');
+    if (saved && saved.trim()) return saved.trim();
+  }
+  const envId = (import.meta.env.VITE_GIGAPUB_PROJECT_ID as string)?.trim();
+  if (envId && envId !== 'asset-tracker') return envId;
+  return '8036';
+}
+
+export function setGigaPubProjectId(newId: string): void {
+  if (typeof window !== 'undefined') {
+    const clean = newId.trim();
+    if (clean) {
+      localStorage.setItem('gigapub_project_id', clean);
+    } else {
+      localStorage.removeItem('gigapub_project_id');
+    }
+    // Reset instance so next call initializes with new project ID
+    sdkInstance = null;
+    injectGigaScripts(clean || getGigaPubProjectId(), true);
+  }
+}
 
 /**
  * Injects GigaPub scripts asynchronously without blocking initial render.
  * Includes enhanced failover for Rewarded Video Ads across primary & backup CDNs.
  */
-function injectGigaScripts(projectId: string) {
-  if (scriptsInjected || typeof document === 'undefined') return;
-  scriptsInjected = true;
+export function injectGigaScripts(projectId: string = getGigaPubProjectId(), forceReload = false) {
+  if (typeof document === 'undefined') return;
+
+  const encodedId = encodeURIComponent(projectId);
 
   // 1. OfferWall SDK Loader
-  if (!window.loadOfferWallSDK && !document.getElementById('gigapub-offerwall-script')) {
+  const existingWallScript = document.getElementById('gigapub-offerwall-script') as HTMLScriptElement | null;
+  const expectedWallSrc = `https://wall.giga.pub/api/v1/loader.js?projectId=${encodedId}`;
+
+  if (!existingWallScript) {
     const wallScript = document.createElement('script');
     wallScript.id = 'gigapub-offerwall-script';
-    wallScript.src = `https://wall.giga.pub/api/v1/loader.js?projectId=${encodeURIComponent(projectId)}`;
+    wallScript.src = expectedWallSrc;
     wallScript.async = true;
     document.head.appendChild(wallScript);
+  } else if (forceReload && !existingWallScript.src.includes(`projectId=${encodedId}`)) {
+    existingWallScript.src = expectedWallSrc;
   }
 
   // 2. Rewarded Video Ads Enhanced Loader with Automatic Backup CDNs
-  if (!document.getElementById('gigapub-ads-script')) {
+  const existingAdScript = document.getElementById('gigapub-ads-script') as HTMLScriptElement | null;
+  const expectedAdSrc = `https://ad.gigapub.tech/script?id=${encodedId}`;
+
+  if (!existingAdScript) {
     const domains = ['https://ad.gigapub.tech', 'https://ru-ad.gigapub.tech'];
     let domainIndex = 0;
     let timer: any;
@@ -67,7 +99,7 @@ function injectGigaScripts(projectId: string) {
       const adScript = document.createElement('script');
       adScript.id = 'gigapub-ads-script';
       adScript.async = true;
-      adScript.src = `${domains[domainIndex]}/script?id=${encodeURIComponent(projectId)}`;
+      adScript.src = `${domains[domainIndex]}/script?id=${encodedId}`;
 
       clearTimeout(timer);
       timer = setTimeout(() => {
@@ -78,7 +110,7 @@ function injectGigaScripts(projectId: string) {
         if (domainIndex < domains.length) {
           loadAdScript();
         }
-      }, 12000);
+      }, 10000);
 
       adScript.onload = () => clearTimeout(timer);
       adScript.onerror = () => {
@@ -94,7 +126,22 @@ function injectGigaScripts(projectId: string) {
     };
 
     loadAdScript();
+  } else if (forceReload && !existingAdScript.src.includes(`id=${encodedId}`)) {
+    existingAdScript.src = expectedAdSrc;
   }
+}
+
+/**
+ * Waits for window.showGiga to be available with timeout.
+ */
+async function waitForShowGiga(timeoutMs = 3500): Promise<boolean> {
+  if (typeof window.showGiga === 'function') return true;
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    await new Promise((r) => setTimeout(r, 100));
+    if (typeof window.showGiga === 'function') return true;
+  }
+  return typeof window.showGiga === 'function';
 }
 
 /**
@@ -102,7 +149,7 @@ function injectGigaScripts(projectId: string) {
  * Registers event listeners for claim verification with server and auto-confirms.
  */
 export async function initGigaPub(
-  projectId: string = GIGAPUB_PROJECT_ID,
+  projectId: string = getGigaPubProjectId(),
   onRewardClaimed?: (claim: GigaPubRewardClaim) => void
 ): Promise<OfferWallSDK | null> {
   if (typeof window === 'undefined') return null;
@@ -118,18 +165,62 @@ export async function initGigaPub(
           clearInterval(checkInterval);
           resolve(sdkInstance);
         }
-      }, 200);
+      }, 150);
     });
   }
 
   isInitializing = true;
   injectGigaScripts(projectId);
 
+  const setupSdk = async (sdk: OfferWallSDK) => {
+    sdkInstance = sdk;
+    window.gigaOfferWallSDK = sdk;
+    isInitializing = false;
+
+    // Listen for reward claims from OfferWall
+    sdk.on('rewardClaim', async (data: GigaPubRewardClaim) => {
+      console.log('[GigaPub OfferWall] Reward claim event received:', data);
+
+      try {
+        const result = await verifyRewardClaim({
+          rewardId: data.rewardId,
+          userId: data.userId,
+          projectId: data.projectId,
+          amount: data.amount,
+          hash: data.hash,
+        });
+
+        if (result.success && result.confirmationHash) {
+          await sdk.confirmReward(data.rewardId, result.confirmationHash);
+          haptics.notification('success');
+
+          if (onRewardClaimed) {
+            onRewardClaimed(data);
+          }
+        }
+      } catch (err) {
+        console.error('[GigaPub] Verification failed:', err);
+      }
+    });
+
+    // Check and recover pending rewards
+    checkPendingOfferWallRewards();
+    return sdk;
+  };
+
+  // Immediate check: if window.loadOfferWallSDK is already loaded
+  if (typeof window.loadOfferWallSDK === 'function') {
+    try {
+      const sdk = await window.loadOfferWallSDK({ projectId });
+      return setupSdk(sdk);
+    } catch (err) {
+      console.warn('[GigaPub] Direct loadOfferWallSDK warning:', err);
+    }
+  }
+
   return new Promise<OfferWallSDK | null>((resolve) => {
-    // OfferWall SDK safe callback registration
     (window.loadGigaSDKCallbacks || (window.loadGigaSDKCallbacks = [])).push(() => {
       if (typeof window.loadOfferWallSDK !== 'function') {
-        console.warn('[GigaPub] loadOfferWallSDK function not available');
         isInitializing = false;
         resolve(null);
         return;
@@ -137,59 +228,24 @@ export async function initGigaPub(
 
       window
         .loadOfferWallSDK({ projectId })
-        .then((sdk) => {
-          sdkInstance = sdk;
-          window.gigaOfferWallSDK = sdk;
-          isInitializing = false;
-
-          // Event: Reward Claim received from user completing tasks in OfferWall
-          sdk.on('rewardClaim', async (data: GigaPubRewardClaim) => {
-            console.log('[GigaPub OfferWall] Reward claim event received:', data);
-
-            try {
-              // 1. Verify with backend Cloudflare Worker
-              const result = await verifyRewardClaim({
-                rewardId: data.rewardId,
-                userId: data.userId,
-                projectId: data.projectId,
-                amount: data.amount,
-                hash: data.hash,
-              });
-
-              if (result.success && result.confirmationHash) {
-                // 2. Cryptographically confirm reward with GigaPub SDK
-                await sdk.confirmReward(data.rewardId, result.confirmationHash);
-                haptics.notification('success');
-
-                if (onRewardClaimed) {
-                  onRewardClaimed(data);
-                }
-              }
-            } catch (err) {
-              console.error('[GigaPub] Failed to verify and confirm reward claim:', err);
-            }
-          });
-
-          // Check and recover pending rewards from interrupted sessions
-          checkPendingOfferWallRewards();
-
-          resolve(sdk);
+        .then(async (sdk) => {
+          const readySdk = await setupSdk(sdk);
+          resolve(readySdk);
         })
         .catch((err) => {
-          console.warn('[GigaPub OfferWall] Init warning (will run in fallback mode):', err);
+          console.warn('[GigaPub OfferWall] Init error:', err);
           isInitializing = false;
           resolve(null);
         });
     });
 
-    // Safety timeout in case of ad blockers or offline network
+    // Timeout safety
     setTimeout(() => {
       if (!sdkInstance && isInitializing) {
-        console.info('[GigaPub] SDK script load timed out or blocked (offline/preview fallback)');
         isInitializing = false;
         resolve(null);
       }
-    }, 8000);
+    }, 6000);
   });
 }
 
@@ -197,37 +253,35 @@ export async function initGigaPub(
  * Checks whether any tasks/offers are available in the OfferWall.
  */
 export function hasOfferWallOffers(): boolean {
-  if (sdkInstance && typeof sdkInstance.hasOffers === 'function') {
+  const sdk = sdkInstance || window.gigaOfferWallSDK;
+  if (sdk && typeof sdk.hasOffers === 'function') {
     try {
-      return sdkInstance.hasOffers();
+      return sdk.hasOffers();
     } catch {
-      return false;
+      return true;
     }
   }
-  return true; // Optimistic default so button is visible
+  return true;
 }
 
 /**
  * Opens the GigaPub OfferWall modal/iframe.
  */
 export function openOfferWall(): boolean {
-  if (sdkInstance && typeof sdkInstance.open === 'function') {
+  const sdk = sdkInstance || window.gigaOfferWallSDK;
+
+  if (sdk && typeof sdk.open === 'function') {
     haptics.impact('medium');
-    sdkInstance.open();
+    sdk.open();
     return true;
   }
 
-  if (window.gigaOfferWallSDK && typeof window.gigaOfferWallSDK.open === 'function') {
-    haptics.impact('medium');
-    window.gigaOfferWallSDK.open();
-    return true;
-  }
-
-  console.info('[GigaPub] OfferWall SDK not ready yet, attempting lazy initialization...');
-  initGigaPub().then((sdk) => {
-    if (sdk) {
+  // Attempt lazy initialization if not ready yet
+  console.info('[GigaPub] OfferWall SDK not ready yet, loading...');
+  initGigaPub().then((readySdk) => {
+    if (readySdk && typeof readySdk.open === 'function') {
       haptics.impact('medium');
-      sdk.open();
+      readySdk.open();
     }
   });
 
@@ -244,8 +298,6 @@ export async function checkPendingOfferWallRewards(): Promise<number> {
   try {
     const pendingRewards = await sdk.pending();
     if (!pendingRewards || pendingRewards.length === 0) return 0;
-
-    console.log(`[GigaPub] Found ${pendingRewards.length} pending reward(s) to recover`);
 
     let recovered = 0;
     for (const reward of pendingRewards) {
@@ -273,7 +325,7 @@ export async function checkPendingOfferWallRewards(): Promise<number> {
 
     return recovered;
   } catch (err) {
-    console.warn('[GigaPub] Pending rewards check skipped:', err);
+    console.warn('[GigaPub] Pending rewards check error:', err);
     return 0;
   }
 }
@@ -299,8 +351,8 @@ export async function getOfferWallOffers(): Promise<{
 }
 
 /**
- * Plays a GigaPub Rewarded Video Ad with automatic fallback.
- * Grants rewards on completion (+10 Pts & Fast Sync trigger).
+ * Plays a GigaPub Rewarded Video Ad.
+ * Waits for the ad player, displays the real ad, and records completion on success.
  */
 export async function showGigaRewardedAd(): Promise<{
   success: boolean;
@@ -309,28 +361,30 @@ export async function showGigaRewardedAd(): Promise<{
 }> {
   haptics.impact('medium');
 
-  // Check if live GigaPub ad function is available
-  if (typeof window.showGiga === 'function') {
+  // 1. Wait for live GigaPub ad function
+  const isReady = await waitForShowGiga(3500);
+
+  if (isReady && typeof window.showGiga === 'function') {
     try {
+      console.log('[GigaPub Ad] Launching window.showGiga()...');
       await window.showGiga();
-      // On successful ad view, credit server
+      // On completed video, credit server
       await recordVideoAdCompleted();
       haptics.notification('success');
       return { success: true, simulated: false };
     } catch (err: any) {
-      console.warn('[GigaPub Ad] Video dismissed or error:', err);
-      return { success: false, error: err?.message || 'Ad skipped or closed early' };
+      console.warn('[GigaPub Ad] User dismissed or error:', err);
+      return {
+        success: false,
+        error: err?.message || 'Iklan ditutup sebelum selesai.',
+      };
     }
   }
 
-  // Fallback simulator for preview / local development or ad blockers
-  console.info('[GigaPub Ad] showGiga not loaded, running simulation fallback');
-  try {
-    await new Promise((res) => setTimeout(res, 1500));
-    await recordVideoAdCompleted();
-    haptics.notification('success');
-    return { success: true, simulated: true };
-  } catch (err: any) {
-    return { success: false, error: err?.message };
-  }
+  // 2. If ad script could not be loaded (e.g. adblocker or network error)
+  console.warn('[GigaPub Ad] window.showGiga not available after timeout');
+  return {
+    success: false,
+    error: 'Iklan GigaPub belum siap atau diblokir adblocker. Pastikan koneksi internet aktif.',
+  };
 }
