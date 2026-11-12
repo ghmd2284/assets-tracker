@@ -99,15 +99,13 @@ export function RewardsModal({
     const opened = openOfferWall();
     if (!opened) {
       setTimeout(() => {
-        if (!hasOfferWallOffers()) {
-          setErrorMessage(
-            lang === 'id'
-              ? 'OfferWall sedang dimuat atau tidak ada tugas tersedia untuk wilayah Anda saat ini.'
-              : 'OfferWall is still loading or no offers are available in your region.'
-          );
-          setTimeout(() => setErrorMessage(null), 5000);
-        }
-      }, 1200);
+        setErrorMessage(
+          lang === 'id'
+            ? 'Modul OfferWall belum diaktifkan di dashboard GigaPub untuk ID 9093 (unit Video Ads dan OfferWall terpisah). Silakan aktifkan unit OfferWall di partner.giga.pub, atau gunakan tombol "Tonton Video" yang sudah aktif 100%!'
+            : 'OfferWall unit is not yet enabled for Project ID 9093 on your GigaPub dashboard. Please activate OfferWall at partner.giga.pub, or use the "Watch Video" button which is 100% live!'
+        );
+        setTimeout(() => setErrorMessage(null), 8000);
+      }, 500);
     }
   };
 
