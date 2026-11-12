@@ -111,3 +111,54 @@ export interface PerformanceResponse {
   range: string;
 }
 
+// GigaPub OfferWall & Rewarded Video Types
+export interface GigaPubRewardClaim {
+  rewardId: string | number;
+  userId: string;
+  projectId: string | number;
+  hash: string;
+  amount: number;
+  description?: string;
+}
+
+export interface GigaPubOfferItem {
+  id: string | number;
+  title: string;
+  description?: string;
+  icon?: string;
+  rewardAmount: number;
+}
+
+export interface GigaPubRewardItem {
+  rewardId: number | string;
+  amount: number;
+  description?: string;
+  status: 1 | 2 | 3; // 1 = available, 2 = pending, 3 = confirmed
+  hash?: string;
+}
+
+export interface RewardVerificationRequest {
+  rewardId: string | number;
+  userId: string;
+  projectId: string | number;
+  amount: number;
+  hash: string;
+}
+
+export interface RewardVerificationResponse {
+  success: boolean;
+  confirmationHash?: string;
+  alreadyClaimed?: boolean;
+  rewardPoints?: number;
+  bonusWalletSlots?: number;
+  error?: string;
+}
+
+export interface UserRewardSummary {
+  rewardPoints: number;
+  bonusWalletSlots: number;
+  maxWallets: number;
+  totalRewardsClaimed: number;
+}
+
+

@@ -5,6 +5,9 @@ import {
   PortfolioSummary,
   MutationTransaction,
   PerformanceResponse,
+  RewardVerificationRequest,
+  RewardVerificationResponse,
+  UserRewardSummary,
 } from '@asset-tracker/shared';
 import { getTelegramInitData } from './telegram';
 
@@ -187,3 +190,97 @@ export async function updatePreferences(prefs: {
     return false;
   }
 }
+
+/**
+ * Verifies a GigaPub OfferWall reward claim with the server.
+ */
+export async function verifyRewardClaim(
+  data: RewardVerificationRequest
+): Promise<RewardVerificationResponse> {
+  const initData = getTelegramInitData();
+  if (!initData) {
+    // Demo/browser preview fallback: return incoming hash as confirmationHash
+    return {
+      success: true,
+      confirmationHash: data.hash,
+      rewardPoints: data.amount,
+      bonusWalletSlots: 1,
+    };
+  }
+
+  try {
+    return await apiFetch<RewardVerificationResponse>('/api/rewards/verify', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  } catch (err: any) {
+    console.warn('[Rewards Verify Warning]:', err);
+    return {
+      success: false,
+      error: err.message || 'Reward verification failed',
+    };
+  }
+}
+
+/**
+ * Records completion of a GigaPub Rewarded Video Ad and credits user perks.
+ */
+export async function recordVideoAdCompleted(): Promise<{
+  success: boolean;
+  rewardPoints: number;
+  bonusWalletSlots: number;
+  pointsEarned: number;
+}> {
+  const initData = getTelegramInitData();
+  if (!initData) {
+    return {
+      success: true,
+      rewardPoints: 10,
+      bonusWalletSlots: 0,
+      pointsEarned: 10,
+    };
+  }
+
+  try {
+    return await apiFetch('/api/rewards/video-complete', {
+      method: 'POST',
+    });
+  } catch (err: any) {
+    console.warn('[Video Ad Complete Warning]:', err);
+    return {
+      success: true,
+      rewardPoints: 10,
+      bonusWalletSlots: 0,
+      pointsEarned: 10,
+    };
+  }
+}
+
+/**
+ * Fetches user's current reward points and bonus wallet slots.
+ */
+export async function fetchRewardsSummary(): Promise<UserRewardSummary> {
+  const initData = getTelegramInitData();
+  if (!initData) {
+    return {
+      rewardPoints: 0,
+      bonusWalletSlots: 0,
+      maxWallets: 10,
+      totalRewardsClaimed: 0,
+    };
+  }
+
+  try {
+    const res = await apiFetch<{ summary: UserRewardSummary }>('/api/rewards/summary');
+    return res.summary;
+  } catch (err) {
+    console.warn('[Rewards Summary Warning]:', err);
+    return {
+      rewardPoints: 0,
+      bonusWalletSlots: 0,
+      maxWallets: 10,
+      totalRewardsClaimed: 0,
+    };
+  }
+}
+

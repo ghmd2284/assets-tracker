@@ -1,9 +1,20 @@
 import React, { useState } from 'react';
-import { WatchedWallet, CurrencyPref, UserProfile } from '@asset-tracker/shared';
+import { WatchedWallet, CurrencyPref, UserProfile, UserRewardSummary } from '@asset-tracker/shared';
 import { WalletList } from './WalletList';
 import { haptics } from '../lib/telegram';
 import { updatePreferences } from '../lib/api';
-import { Shield, Bell, DollarSign, User, Check, ShieldAlert, SlidersHorizontal } from 'lucide-react';
+import {
+  Shield,
+  Bell,
+  DollarSign,
+  User,
+  Check,
+  ShieldAlert,
+  SlidersHorizontal,
+  Gift,
+  Sparkles,
+  ChevronRight,
+} from 'lucide-react';
 import { Language, translations } from '../lib/i18n';
 
 interface SettingsTabProps {
@@ -14,6 +25,8 @@ interface SettingsTabProps {
   onRefreshWallets: () => void;
   onOpenAddWallet: () => void;
   onOpenAdmin?: () => void;
+  onOpenRewards?: () => void;
+  rewardsSummary?: UserRewardSummary;
   lang?: Language;
 }
 
@@ -25,6 +38,8 @@ export function SettingsTab({
   onRefreshWallets,
   onOpenAddWallet,
   onOpenAdmin,
+  onOpenRewards,
+  rewardsSummary,
   lang = 'id',
 }: SettingsTabProps) {
   const t = translations[lang];
@@ -135,6 +150,50 @@ export function SettingsTab({
 
       {/* Tracked Wallets Management */}
       <WalletList wallets={wallets} onRefresh={onRefreshWallets} lang={lang} />
+
+      {/* Rewards & Missions Entry Bento Card */}
+      {onOpenRewards && (
+        <div
+          onClick={() => {
+            haptics.impact('light');
+            onOpenRewards();
+          }}
+          className="bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark hover:border-amber-500/40 rounded-tile p-4 shadow-sm flex items-center justify-between cursor-pointer transition-all active:scale-[0.99] group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <Gift className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-brand-primary dark:text-brand-primary-dark">
+                  {t.rewards.title}
+                </span>
+                <span className="px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-mono text-[9px] font-semibold">
+                  GigaPub
+                </span>
+              </div>
+              <div className="text-[11px] text-brand-subdued mt-0.5 flex items-center gap-2">
+                <span className="flex items-center gap-0.5">
+                  <Sparkles className="w-3 h-3 text-amber-500" />
+                  {rewardsSummary?.rewardPoints || 0} Pts
+                </span>
+                <span>•</span>
+                <span className="text-semantic-gain dark:text-semantic-gain-dark">
+                  +{rewardsSummary?.bonusWalletSlots || 0} Slot
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 text-xs font-semibold text-brand-primary dark:text-brand-primary-dark">
+            <span className="text-[11px] text-brand-subdued group-hover:text-brand-primary dark:group-hover:text-brand-primary-dark transition-colors">
+              {t.rewards.badge}
+            </span>
+            <ChevronRight className="w-4 h-4 text-brand-subdued group-hover:translate-x-0.5 transition-transform" />
+          </div>
+        </div>
+      )}
 
       {/* Settings & Preferences Bento Card */}
       <div className="bg-surface dark:bg-surface-dark border border-brand-border dark:border-brand-border-dark rounded-tile p-5 shadow-sm flex flex-col gap-4 transition-all">

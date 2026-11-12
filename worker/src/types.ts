@@ -15,6 +15,9 @@ export interface Env {
   TONAPI_SECRET?: string;
   ADMIN_TELEGRAM_IDS?: string;
   PRICE_CACHE?: KVNamespace;
+  // GigaPub Monetization Credentials
+  GIGAPUB_PROJECT_ID?: string;
+  GIGAPUB_SECRET_KEY?: string;
 }
 
 export interface TelegramUser {

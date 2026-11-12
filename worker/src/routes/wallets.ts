@@ -123,12 +123,21 @@ walletRoutes.post('/', async (c) => {
     return c.json({ error: 'No valid addresses detected', invalid }, 400);
   }
 
-  // 2. Check user wallet limit based on distinct physical addresses
-  const { data: existingWallets } = await supabase
-    .from('user_wallets')
-    .select('watched_addresses(address)')
-    .eq('user_id', user.id)
-    .eq('is_demo', false);
+  // 2. Check user wallet limit based on distinct physical addresses + bonus slots from rewards
+  const [{ data: existingWallets }, { data: userProfile }] = await Promise.all([
+    supabase
+      .from('user_wallets')
+      .select('watched_addresses(address)')
+      .eq('user_id', user.id)
+      .eq('is_demo', false),
+    supabase
+      .from('users')
+      .select('bonus_wallet_slots')
+      .eq('id', user.id)
+      .maybeSingle(),
+  ]);
+
+  const maxAllowedWallets = 10 + (Number(userProfile?.bonus_wallet_slots) || 0);
 
   const distinctExistingAddresses = new Set<string>();
   for (const w of (existingWallets || []) as any[]) {
@@ -140,9 +149,11 @@ walletRoutes.post('/', async (c) => {
     (v) => !distinctExistingAddresses.has(v.normalized.toLowerCase())
   );
 
-  if (distinctExistingAddresses.size + trulyNewAddresses.length > 10) {
+  if (distinctExistingAddresses.size + trulyNewAddresses.length > maxAllowedWallets) {
     return c.json(
-      { error: 'Batas maksimal 10 alamat dompet unik per akun gratis tercapai.' },
+      {
+        error: `Batas maksimal ${maxAllowedWallets} alamat dompet unik tercapai. Selesaikan misi di menu Hadiah untuk menambah slot dompet!`,
+      },
       400
     );
   }

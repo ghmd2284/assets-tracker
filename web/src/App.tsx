@@ -5,7 +5,7 @@ import {
   haptics,
   syncTheme,
 } from './lib/telegram';
-import { syncUserProfile, fetchPortfolio, fetchWallets, fetchTransactions, syncBalances } from './lib/api';
+import { syncUserProfile, fetchPortfolio, fetchWallets, fetchTransactions, syncBalances, fetchRewardsSummary } from './lib/api';
 import {
   formatFiat,
   formatSignedPercent,
@@ -15,6 +15,7 @@ import {
   PortfolioSummary,
   WatchedWallet,
   MutationTransaction,
+  UserRewardSummary,
   getChainLogoUrl,
 } from '@asset-tracker/shared';
 import { AddWalletModal } from './components/AddWalletModal';
@@ -25,9 +26,11 @@ import { RecentTransactions } from './components/RecentTransactions';
 import { AllTransactionsModal } from './components/AllTransactionsModal';
 import { PerfTab } from './components/PerfTab';
 import { SettingsTab } from './components/SettingsTab';
+import { RewardsModal } from './components/RewardsModal';
 import { AdminModal } from './components/AdminModal';
 import { HomeSkeleton } from './components/Skeletons';
 import { Language, translations } from './lib/i18n';
+import { initGigaPub, checkPendingOfferWallRewards } from './lib/gigapub';
 import {
   ShieldCheck,
   Plus,
@@ -40,6 +43,7 @@ import {
   Home,
   RefreshCw,
   CheckCircle2,
+  Gift,
 } from 'lucide-react';
 
 export function App() {
@@ -57,6 +61,13 @@ export function App() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [isAllTxModalOpen, setIsAllTxModalOpen] = useState(false);
+  const [isRewardsModalOpen, setIsRewardsModalOpen] = useState(false);
+  const [rewardsSummary, setRewardsSummary] = useState<UserRewardSummary>({
+    rewardPoints: 0,
+    bonusWalletSlots: 0,
+    maxWallets: 10,
+    totalRewardsClaimed: 0,
+  });
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -249,8 +260,25 @@ export function App() {
           return loadData();
         })
         .catch(console.error);
+
+      // Fetch user rewards stats
+      fetchRewardsSummary().then(setRewardsSummary).catch(console.warn);
     }
-  }, [loadData]);
+
+    // Initialize GigaPub OfferWall & Rewarded Ads SDK
+    initGigaPub(undefined, (claim) => {
+      showToast(translations[lang].rewards.claimSuccessToast(claim.amount));
+      fetchRewardsSummary().then(setRewardsSummary).catch(console.warn);
+    }).then(async (sdk) => {
+      if (sdk) {
+        const recovered = await checkPendingOfferWallRewards();
+        if (recovered > 0) {
+          showToast(translations[lang].rewards.recoveredToast(recovered));
+          fetchRewardsSummary().then(setRewardsSummary).catch(console.warn);
+        }
+      }
+    });
+  }, [loadData, lang, showToast]);
 
   const toggleTheme = () => {
     const next = !isDarkMode;
@@ -399,6 +427,21 @@ export function App() {
               <div key={isDarkMode ? 'dark' : 'light'} className="animate-japandi-fade">
                 {isDarkMode ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4" />}
               </div>
+            </button>
+
+            {/* Tasks & Rewards (GigaPub) Button */}
+            <button
+              type="button"
+              onClick={() => {
+                haptics.impact('light');
+                setIsRewardsModalOpen(true);
+              }}
+              className="relative min-w-[36px] min-h-[36px] rounded-full border border-brand-border dark:border-brand-border-dark bg-surface dark:bg-surface-dark text-brand-subdued hover:text-amber-500 dark:hover:text-amber-400 active:scale-95 transition-all flex items-center justify-center shadow-xs"
+              aria-label={t.rewards.title}
+              title={t.rewards.title}
+            >
+              <Gift className="w-4 h-4" />
+              <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
             </button>
 
             {/* Sync Refresh Button */}
@@ -686,6 +729,8 @@ export function App() {
               onRefreshWallets={loadData}
               onOpenAddWallet={() => setIsAddModalOpen(true)}
               onOpenAdmin={() => setIsAdminModalOpen(true)}
+              onOpenRewards={() => setIsRewardsModalOpen(true)}
+              rewardsSummary={rewardsSummary}
               lang={lang}
             />
           </div>
@@ -785,6 +830,25 @@ export function App() {
       <AdminModal
         isOpen={isAdminModalOpen}
         onClose={() => setIsAdminModalOpen(false)}
+      />
+
+      {/* GigaPub Tasks & Rewards Modal */}
+      <RewardsModal
+        isOpen={isRewardsModalOpen}
+        onClose={() => setIsRewardsModalOpen(false)}
+        summary={rewardsSummary}
+        onRewardClaimed={(newPoints, newSlots) => {
+          setRewardsSummary((prev) => ({
+            ...prev,
+            rewardPoints: newPoints,
+            bonusWalletSlots: newSlots,
+            maxWallets: 10 + newSlots,
+          }));
+        }}
+        onTriggerFastSync={async () => {
+          await loadData(true);
+        }}
+        lang={lang}
       />
     </div>
   );
